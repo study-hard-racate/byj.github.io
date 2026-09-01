@@ -14,6 +14,7 @@ const CORE = [
   "./css/style.css",
   "./js/config.js",
   "./js/categories.js",
+  "./js/xlsx.js",
   "./js/parsers.js",
   "./js/charts.js",
   "./js/app.js",

@@ -46,9 +46,8 @@ async function handleFile(file) {
   document.getElementById("resultBox").style.display = "none";
   try {
     const buf = await file.arrayBuffer();
-    const text = decodeBytes(buf);
-    const parsed = parseBillText(text, document.getElementById("srcSel").value);
-    PARSED = Object.assign({}, parsed, { text, name: file.name });
+    const parsed = await parseBillFile(buf, file.name, document.getElementById("srcSel").value);
+    PARSED = Object.assign({}, parsed, { name: file.name });
     showPreview();
   } catch (e) {
     PARSED = null;
@@ -62,10 +61,11 @@ function showPreview() {
   const box = document.getElementById("parseBox");
   box.style.display = "";
   const srcName = { alipay: "支付宝", wechat: "微信", bank: "银行卡", generic: "通用" }[meta.source] || meta.source;
+  const fileType = meta.fileType === "xlsx" ? "Excel" : "CSV";
   const warn = meta.warnings.length
     ? `<br><span style="color:var(--orange)">⚠ ${meta.warnings.map(esc).join("；")}</span>` : "";
   document.getElementById("parseInfo").innerHTML =
-    `<b>识别来源：${esc(srcName)}</b> · 解析出 <b>${records.length}</b> 条有效记录 · 跳过 ${meta.skipped} 条无效${warn}`;
+    `<b>识别来源：${esc(srcName)}</b>（${fileType}）· 解析出 <b>${records.length}</b> 条有效记录 · 跳过 ${meta.skipped} 条无效${warn}`;
 
   const body = document.getElementById("previewBody");
   body.innerHTML = records.slice(0, 100).map(r => `

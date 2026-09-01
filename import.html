@@ -45,10 +45,10 @@
             点击选择文件，或把文件拖到这里
           </div>
           <div class="muted" style="font-size:12px;margin-top:6px">
-            支持支付宝 / 微信导出的 CSV（GBK / UTF-8 自动识别）<br>
-            官方 zip 是加密的，请<b>先解压成 CSV</b> 再上传
+            支持 <b>.csv</b>（支付宝/微信/通用）和 <b>.xlsx</b>（微信「个人对账」导出的 Excel）<br>
+            全部在浏览器本地解析，不上传
           </div>
-          <input type="file" id="fileInput" accept=".csv,.txt" style="display:none">
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.txt" style="display:none">
         </div>
         <div id="fileName" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
 
@@ -77,20 +77,21 @@
             <div style="font-weight:600;color:var(--text);margin-bottom:4px">🅰️ 支付宝</div>
             <div class="muted">
               App → 我的 → 账单 → 右上角「…」→ <b>开具交易流水证明</b> → 选择「用于个人对账」
-              → 选好时间范围 → 填邮箱 → 收到带解压码的 zip，<b>解压出 CSV</b> 后上传。
+              → 选好时间范围 → 填邮箱 → 收到<b>带解压码的 zip</b>，解压出 CSV 后上传。
             </div>
           </div>
           <div style="margin-bottom:14px">
             <div style="font-weight:600;color:var(--text);margin-bottom:4px">💚 微信</div>
             <div class="muted">
-              微信 → 我 → 服务 → 钱包 → 账单 → 右上角「…」→ <b>账单下载</b>
-              → 选择「用于个人对账」→ 选时间范围 → 邮件收到带密码的压缩包，<b>解压出 CSV</b> 后上传。
+              我 → 服务 → 钱包 → 账单 → 右上角「…」→ <b>账单下载</b> → 选「<b>用于个人对账</b>」
+              → 选时间范围 → 填邮箱 → 邮件附件是 <b>.xlsx Excel 文件</b>，<b>直接上传即可</b>。<br>
+              <span style="color:var(--orange)">注意：选「用作证明材料」导出的是 PDF（带印章的凭证），无法导入，请选「用于个人对账」。</span>
             </div>
           </div>
           <div style="margin-bottom:14px">
             <div style="font-weight:600;color:var(--text);margin-bottom:4px">🏦 银行卡</div>
             <div class="muted">
-              各银行 App 一般都有「交易明细导出」，导出 CSV 后选「其他通用 CSV」上传即可。
+              各银行 App 一般都有「交易明细导出」，导出 CSV 或 Excel 后选「其他通用 CSV / Excel」上传即可。
             </div>
           </div>
           <div style="padding:11px;border-radius:9px;background:var(--card-2);font-size:12.5px">
@@ -144,6 +145,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/categories.js"></script>
+<script src="js/xlsx.js"></script>
 <script src="js/parsers.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>

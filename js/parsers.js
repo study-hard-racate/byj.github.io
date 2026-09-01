@@ -190,32 +190,31 @@ function fingerprint(dt, amount, counterparty, description) {
 }
 
 /**
- * 解析账单文本
- * @param {string} text 已解码的文本
+ * 解析二维网格（CSV / Excel 共用核心）
+ * @param {string[][]} grid 单元格网格
  * @param {string} manualSource alipay/wechat/bank/generic/""（自动）
- * @returns {{records: object[], meta: object}}
  */
-function parseBillText(text, manualSource = "") {
-  const source = manualSource || detectSource(text);
+function parseGrid(grid, manualSource = "") {
+  const rows = grid.filter(r => r.some(c => String(c).trim() !== ""));
+  const lines = rows.map(r => r.join(","));
+  const source = manualSource || detectSource(lines.slice(0, 4).join(" "));
   const warnings = [];
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
   const header = findHeader(lines);
   if (!header) {
-    return { records: [], meta: { source, total_rows: 0, skipped: 0, warnings: ["没找到表头行，请确认这是支付宝/微信导出的原始账单 CSV（先解压 zip）"] } };
+    return { records: [], meta: { source, total_rows: 0, skipped: 0, warnings: ["没找到表头行，请确认这是支付宝/微信导出的原始账单（微信「用于个人对账」导出的 Excel 可直接上传）"] } };
   }
   const mapping = mapColumns(splitCsvLine(header.line));
   const missing = ["time", "amount"].filter(f => !(f in mapping));
   if (missing.length) {
     warnings.push(`表头缺少关键列：${missing.join("/")}，已尝试按通用格式解析`);
   }
-  const body = lines.slice(header.idx + 1);
+  const body = rows.slice(header.idx + 1);
 
   const records = [];
   let skipped = 0;
 
-  for (const line of body) {
-    const cells = splitCsvLine(line);
+  for (const cells of body) {
     const cell = (field, def = "") => {
       const i = mapping[field];
       return (i === undefined || i >= cells.length) ? def : norm(cells[i]);
@@ -245,7 +244,7 @@ function parseBillText(text, manualSource = "") {
     else if (rawDirection === "收入" || rawDirection === "收款") direction = "income";
     else {
       const joined = `${rawCategory}${description}${counterparty}${status}`;
-      // 修复原版 bug：中性记录若命中「不计收支」关键词才记 transfer，否则按支出处理
+      // 中性记录：命中「不计收支」关键词记 transfer，否则按支出处理
       direction = NON_SPEND_KEYWORDS.some(k => joined.includes(k)) ? "transfer" : "expense";
     }
 
@@ -267,4 +266,32 @@ function parseBillText(text, manualSource = "") {
     records,
     meta: { source, total_rows: records.length, skipped, warnings },
   };
+}
+
+/** 解析 CSV 文本 */
+function parseBillText(text, manualSource = "") {
+  const grid = text.split(/\r?\n/).map(l => splitCsvLine(l));
+  return parseGrid(grid, manualSource);
+}
+
+/** 解析文件（按扩展名分派：.xlsx 走 Excel 解析，其余按 CSV） */
+async function parseBillFile(bytes, filename = "", manualSource = "") {
+  const lower = String(filename).toLowerCase();
+  if (lower.endsWith(".xlsx")) {
+    try {
+      const grid = await xlsxToGrid(bytes);
+      const parsed = parseGrid(grid, manualSource);
+      parsed.meta.fileType = "xlsx";
+      return parsed;
+    } catch (e) {
+      return {
+        records: [],
+        meta: { source: manualSource || "xlsx", total_rows: 0, skipped: 0,
+                warnings: ["Excel 解析失败：" + e.message] },
+      };
+    }
+  }
+  const parsed = parseBillText(decodeBytes(bytes), manualSource);
+  parsed.meta.fileType = "csv";
+  return parsed;
 }
