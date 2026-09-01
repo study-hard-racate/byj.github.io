@@ -115,8 +115,8 @@ async function render() {
       <td><span class="chip editable" data-act="editCat" data-id="${r.id}">
         <span class="dot" style="background:${catColor(r.category)}"></span>${esc(r.category)}</span></td>
       <td class="ellip">${esc(r.counterparty || "—")}</td>
-      <td class="ellip muted">${esc(r.description || "")}</td>
-      <td class="muted" style="white-space:nowrap">${esc(r.source)}</td>
+      <td class="ellip muted desc-col">${esc(r.description || "")}</td>
+      <td class="muted src-col" style="white-space:nowrap">${esc(r.source)}</td>
       <td class="num ${r.direction === 'income' ? 'amount-in' : (r.direction === 'expense' ? 'amount-out' : 'muted')}">
         ${r.direction === "income" ? "+" : (r.direction === "expense" ? "-" : "")}${money(r.amount)}</td>
       <td><button class="btn sm danger" data-act="delTx" data-id="${r.id}">删</button></td>

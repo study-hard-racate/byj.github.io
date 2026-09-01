@@ -104,8 +104,8 @@ async function render() {
   ALL = { series, stats: st };
   const has = st.records > 0;
 
-  document.getElementById("emptyHint").style.display = has ? "none" : "";
-  document.getElementById("content").style.display = has ? "" : "none";
+  document.getElementById("emptyBanner").style.display = has ? "none" : "";
+  document.getElementById("dataSections").style.display = has ? "" : "none";
 
   document.getElementById("sSleep").innerHTML = st.avg_sleep + "<small>h</small>";
   document.getElementById("sSleepFoot").textContent = st.avg_sleep >= 7 ? "睡眠达标 ✓" : "建议 7-9 小时";
@@ -159,9 +159,9 @@ async function render() {
     ], yMin: 0, tipFormat: v => String(v)
   }));
 
-  // 热力图
+  // 热力图（随所选时间范围缩放）
   const hm = document.getElementById("heatmap");
-  hm.innerHTML = S.slice(-119).map(x => {
+  hm.innerHTML = S.slice(-days).map(x => {
     const score = Math.min(1, (x.sleep_hours / 8) * 0.6 + (x.exercise_minutes / 60) * 0.4);
     const has = x.id !== null && x.id !== undefined;
     const bg = !has ? "var(--bg-soft)"

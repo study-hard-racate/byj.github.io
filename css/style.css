@@ -341,3 +341,11 @@ tbody tr:last-child td { border-bottom: none; }
   .grid-4, .grid-2 { grid-template-columns: 1fr; }
   .btn { padding: 6px 10px; font-size: 12.5px; }
 }
+
+/* 移动端表格降列：小屏藏「说明」，超小屏再藏「来源」 */
+@media (max-width: 640px) {
+  .desc-col { display: none; }
+}
+@media (max-width: 480px) {
+  .src-col { display: none; }
+}

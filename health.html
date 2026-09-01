@@ -30,25 +30,18 @@
       </div>
     </div>
 
-    <div id="emptyHint" style="display:none">
-      <div class="card">
-        <div class="empty">
-          <div class="big">❤️</div>
-          <p>还没有打卡记录。<br>先记录今天，之后每天花 20 秒补上就行。</p>
-          <div class="btn-row" style="justify-content:center">
-            <button class="btn primary" onclick="openCheckin()">开始打卡</button>
-          </div>
-        </div>
+    <div id="emptyBanner" style="display:none">
+      <div class="banner">
+        <div class="banner-body">❤️ 还没有打卡记录，从今天开始，每天 20 秒就能看出规律。</div>
       </div>
     </div>
 
-    <div id="content">
-      <!-- 今日打卡 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">
-          <span>今日打卡</span>
-          <span class="tag">同一天再次提交会覆盖</span>
-        </div>
+    <!-- 今日打卡（始终可见，没有数据也能打卡） -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">
+        <span>今日打卡</span>
+        <span class="tag">同一天再次提交会覆盖</span>
+      </div>
         <div class="checkin-grid">
           <label class="field">
             <span class="range-head"><span>日期</span></span>
@@ -111,6 +104,7 @@
         </div>
       </div>
 
+    <div id="dataSections">
       <!-- 统计 -->
       <div class="grid grid-4" style="margin-bottom:16px">
         <div class="stat purple">
@@ -182,7 +176,7 @@
           </table>
         </div>
       </div>
-    </div>
+    </div><!-- /dataSections -->
 
   </main>
 </div>
