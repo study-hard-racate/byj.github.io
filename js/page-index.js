@@ -17,10 +17,12 @@ async function loadMonths() {
   return months;
 }
 
-/* ---------- 提醒横幅 ---------- */
-async function renderBanners(sum, healthStats) {
+/* ---------- 提醒横幅（自包含：重新拉取数据，供 render 和切回页面时调用）---------- */
+async function refreshBanners() {
   const box = document.getElementById("banners");
+  if (!box) return;
   const html = [];
+  const today = new Date();
 
   // 演示数据提示
   const isDemo = await DB.getSetting("demo", false);
@@ -36,30 +38,27 @@ async function renderBanners(sum, healthStats) {
     healthHour: APP_CONFIG.reminder.healthHour,
     monthlyDay: APP_CONFIG.reminder.monthlyDay,
   };
-  const today = new Date();
-  const checkedToday = await DB.getHealthByDay(new Date());
-  if (!checkedToday) {
-    const hour = today.getHours();
-    if (hour >= reminder.healthHour) {
-      html.push(`<div class="banner">
-        <div class="banner-body">⏰ 已经 ${hour} 点了，今天还没打卡。</div>
-        <a class="btn sm primary" href="health.html">去打卡</a>
-      </div>`);
-      tryNotify("今天还没打卡，去记录一下吧");
-    }
+  const checkedToday = await DB.getHealthByDay(today);
+  if (!checkedToday && today.getHours() >= reminder.healthHour) {
+    html.push(`<div class="banner">
+      <div class="banner-body">⏰ 已经 ${today.getHours()} 点了，今天还没打卡。</div>
+      <a class="btn sm primary" href="health.html">去打卡</a>
+    </div>`);
+    tryNotify("今天还没打卡，去记录一下吧", "health");
   }
 
   // 月度导入提醒
   const months = await allMonthKeys();
-  const thisMonthHasData = months.includes(nowMonth);
-  if (!thisMonthHasData && today.getDate() >= reminder.monthlyDay) {
+  if (!months.includes(nowMonth) && today.getDate() >= reminder.monthlyDay) {
     html.push(`<div class="banner">
       <div class="banner-body">📥 ${nowMonth} 还没有任何账单记录，记得导入。</div>
       <a class="btn sm primary" href="import.html">去导入</a>
     </div>`);
+    tryNotify(`${nowMonth} 还没有账单记录，记得导入`, "bill");
   }
 
   // 超支提醒
+  const sum = await DB.summaryForMonth(nowMonth);
   if (sum.budget && sum.expense > sum.budget) {
     html.push(`<div class="banner danger">
       <div class="banner-body">⚠️ 本月已<b>超支 ${money0(sum.expense - sum.budget)}</b>（预算 ${money0(sum.budget)}）。</div>
@@ -70,13 +69,21 @@ async function renderBanners(sum, healthStats) {
   box.innerHTML = html.join("");
 }
 
-function tryNotify(msg) {
+function tryNotify(msg, kind) {
   try {
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("BYJ 个人看板", { body: msg, icon: "icons/icon-192.png" });
-    }
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    // 每天每种提醒只发一次，避免反复打扰
+    const key = "pd-notify-" + kind + "-" + todayStr();
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+    new Notification("BYJ 个人看板", { body: msg, icon: "icons/icon-192.png" });
   } catch (e) { /* 忽略 */ }
 }
+
+// 从别的 App 切回本站时复查提醒（手机 PWA 场景很常用）
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshBanners().catch(console.error);
+});
 
 /* ---------- 渲染 ---------- */
 async function render() {
@@ -209,7 +216,7 @@ async function render() {
     </div>` : emptyState("❤️", "还没有健康打卡记录",
       `<a class="btn primary" href="health.html">去打卡</a>`);
 
-  await renderBanners(sum, health);
+  await refreshBanners();
 }
 
 monthSel.addEventListener("change", render);

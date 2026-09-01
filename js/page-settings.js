@@ -16,18 +16,83 @@ async function load() {
     healthHour: APP_CONFIG.reminder.healthHour,
     monthlyDay: APP_CONFIG.reminder.monthlyDay,
   };
-  document.getElementById("setHealthHour").value = reminder.healthHour;
+  const hour = Math.max(0, Math.min(23, reminder.healthHour));
+  document.getElementById("setHealthTime").value = String(hour).padStart(2, "0") + ":00";
   document.getElementById("setMonthlyDay").value = reminder.monthlyDay;
-  document.getElementById("notifyHint").textContent =
-    "Notification" in window
-      ? (Notification.permission === "granted" ? "系统通知已开启 ✓" : "点击开启浏览器通知权限")
-      : "当前浏览器不支持通知";
+  refreshNotifyUI();
+  refreshReminderStatus(reminder);
 
   document.getElementById("ver").textContent = APP_CONFIG.version;
 
   // iOS 显示 Safari 手动添加指引
   const iosHint = document.getElementById("iosHint");
   if (iosHint && window.isIOSPWA) iosHint.style.display = "";
+}
+
+/* ---------- 通知权限 ---------- */
+function refreshNotifyUI() {
+  const hint = document.getElementById("notifyHint");
+  const btn = document.getElementById("notifyBtn");
+  if (!btn || !hint) return;
+  if (!("Notification" in window)) {
+    hint.textContent = "当前浏览器不支持通知";
+    btn.style.display = "none";
+    return;
+  }
+  btn.style.display = "";
+  if (Notification.permission === "granted") {
+    hint.textContent = "系统通知已开启 ✓";
+    btn.textContent = "已开启";
+    btn.disabled = true;
+  } else if (Notification.permission === "denied") {
+    hint.textContent = "通知被拒绝，请到浏览器设置里允许本站";
+    btn.textContent = "重新开启";
+    btn.disabled = false;
+  } else {
+    hint.textContent = "开启后可收到打卡 / 账单提醒";
+    btn.textContent = "开启通知";
+    btn.disabled = false;
+  }
+}
+
+async function toggleNotify() {
+  if (!("Notification" in window)) return;
+  const perm = await Notification.requestPermission();
+  refreshNotifyUI();
+  toast(perm === "granted" ? "通知已开启" : "未获得通知权限", perm === "granted" ? "ok" : "error");
+}
+
+function testNotify() {
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    toast("请先开启通知权限", "error");
+    return;
+  }
+  try {
+    new Notification("BYJ 个人看板", {
+      body: "这是一条测试通知，收到就说明设置成功了 ✓",
+      icon: "icons/icon-192.png",
+    });
+    toast("测试通知已发送", "ok");
+  } catch (e) {
+    toast("发送失败：" + e.message, "error");
+  }
+}
+
+/* ---------- 提醒状态预览 ---------- */
+async function refreshReminderStatus(reminder) {
+  const box = document.getElementById("reminderStatus");
+  if (!box) return;
+  const lines = [];
+  const rec = await DB.getHealthByDay(new Date());
+  lines.push(rec
+    ? `✅ 今日已打卡（睡眠 ${rec.sleep_hours || 0}h · 运动 ${rec.exercise_minutes || 0}分）`
+    : `⏰ 今天还没打卡 · ${String(reminder.healthHour).padStart(2, "0")}:00 后打开本站会提醒`);
+  const months = await allMonthKeys();
+  const m = nowMonthStr();
+  lines.push(months.includes(m)
+    ? `✅ ${m} 已有账单记录`
+    : `⏰ ${m} 还没有账单 · 每月 ${reminder.monthlyDay} 号后打开本站会提醒`);
+  box.innerHTML = lines.join("<br>");
 }
 
 async function saveBrand() {
@@ -54,18 +119,12 @@ async function clearBudget() {
 }
 
 async function saveReminder() {
-  const healthHour = Math.min(23, Math.max(0, parseInt(document.getElementById("setHealthHour").value, 10) || 20));
+  const timeVal = document.getElementById("setHealthTime").value || "20:00";
+  const healthHour = Math.min(23, Math.max(0, parseInt(timeVal.split(":")[0], 10) || 20));
   const monthlyDay = Math.min(28, Math.max(1, parseInt(document.getElementById("setMonthlyDay").value, 10) || 2));
   await DB.setSetting("reminder", { healthHour, monthlyDay });
   toast("提醒设置已保存", "ok");
-}
-
-async function enableNotify() {
-  if (!("Notification" in window)) { toast("当前浏览器不支持通知", "error"); return; }
-  const perm = await Notification.requestPermission();
-  document.getElementById("notifyHint").textContent =
-    perm === "granted" ? "系统通知已开启 ✓" : "未获得通知权限";
-  toast(perm === "granted" ? "通知已开启" : "通知未开启", perm === "granted" ? "ok" : "error");
+  refreshReminderStatus({ healthHour, monthlyDay });
 }
 
 /* ---------- 数据管理 ---------- */

@@ -54,18 +54,24 @@
 
     <!-- 提醒 -->
     <div class="card" style="margin-bottom:16px">
-      <div class="card-title"><span>⏰ 提醒</span><span class="tag">只在打开网站时生效（纯前端无法后台定时）</span></div>
+      <div class="card-title"><span>⏰ 提醒</span><span class="tag">打开网站时自动检查</span></div>
       <div class="checkin-grid">
-        <label class="field">打卡提醒时间（超过此钟点未打卡则提醒）
-          <input type="number" id="setHealthHour" min="0" max="23" value="20">
+        <label class="field">打卡提醒时间
+          <input type="time" id="setHealthTime" value="20:00">
         </label>
-        <label class="field">账单导入提醒日（每月几号还没导入则提醒）
+        <label class="field">账单导入提醒日
           <input type="number" id="setMonthlyDay" min="1" max="28" value="2">
         </label>
       </div>
-      <div class="btn-row" style="margin-top:14px">
+      <div class="muted" style="font-size:12px;margin-top:8px;line-height:1.8">
+        超过打卡时间还没打卡、或过了提醒日还没导入账单时，打开 / 切回本站会提示（可发系统通知）。
+        纯前端无法在后台定时，所以"打开时才提醒"是它的上限。
+      </div>
+      <div id="reminderStatus" style="margin-top:12px;font-size:13px;line-height:2"></div>
+      <div class="btn-row" style="margin-top:10px">
         <button class="btn primary" onclick="saveReminder()">保存提醒设置</button>
-        <button class="btn" onclick="enableNotify()">🔔 开启系统通知</button>
+        <button class="btn" id="notifyBtn" onclick="toggleNotify()">开启通知</button>
+        <button class="btn" onclick="testNotify()">🔔 测试通知</button>
         <span class="muted" id="notifyHint" style="font-size:12px"></span>
       </div>
     </div>
