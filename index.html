@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<meta name="description" content="个人财务看板 + 习惯健康追踪，数据只存在浏览器本地">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="index">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>总览</h1>
+        <div class="sub">钱花在哪了 + 最近状态怎么样，一屏看完</div>
+      </div>
+      <div class="btn-row">
+        <select id="monthSel" style="min-width:120px"></select>
+        <a class="btn" href="import.html">📥 导入账单</a>
+      </div>
+    </div>
+
+    <div id="banners"></div>
+
+    <div id="emptyAll" style="display:none">
+      <div class="card">
+        <div class="empty">
+          <div class="big">📊</div>
+          <p>还没有任何数据。<br>先导入一份支付宝 / 微信账单，或者手动记一笔。</p>
+          <div class="btn-row" style="justify-content:center">
+            <a class="btn primary" href="import.html">去导入账单</a>
+            <a class="btn" href="health.html">先去打卡</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="mainContent">
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="stat red">
+          <div class="label">本月支出</div><div class="value" id="sExpense">—</div>
+          <div class="foot" id="sExpenseFoot"></div>
+        </div>
+        <div class="stat green">
+          <div class="label">本月收入</div><div class="value" id="sIncome">—</div>
+          <div class="foot" id="sIncomeFoot"></div>
+        </div>
+        <div class="stat">
+          <div class="label">本月结余</div><div class="value" id="sBalance">—</div>
+          <div class="foot" id="sBalanceFoot"></div>
+        </div>
+        <div class="stat orange">
+          <div class="label">日均支出</div><div class="value" id="sAvg">—</div>
+          <div class="foot" id="sAvgFoot"></div>
+        </div>
+      </div>
+
+      <!-- 预算进度 -->
+      <div class="card" id="budgetCard" style="margin-bottom:16px;display:none">
+        <div class="card-title">
+          <span>本月预算</span>
+          <span class="tag" id="budgetTag"></span>
+        </div>
+        <div class="budget-track"><div class="budget-fill" id="budgetFill" style="width:0%"></div></div>
+        <div class="budget-foot">
+          <span id="budgetSpent"></span>
+          <span id="budgetLeft"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-1-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">支出构成 <span class="tag" id="catTag"></span></div>
+          <div id="pieBox"></div>
+          <div class="legend" id="pieLegend" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span>近 12 个月收支</span>
+            <span class="tag">柱=支出 / 线=结余</span>
+          </div>
+          <div id="trendBox"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2-1" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">本月每日支出 <span class="tag" id="dailyTag"></span></div>
+          <div id="dailyBox"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span>健康速览</span>
+            <a class="tag" href="health.html" style="color:var(--accent)">去打卡 →</a>
+          </div>
+          <div id="healthMini"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">本月花钱最多的地方 <span class="tag">Top 8</span></div>
+        <div id="topBox"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block title %}财务账单 · 个人看板{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>财务账单</h1>
+    <div class="sub">导入 → 自动分类 → 看清钱去哪了</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn primary" onclick="openAdd()">＋ 记一笔</button>
+    <button class="btn" onclick="reclassify()">🔄 重跑分类</button>
+    <a class="btn" href="/export/csv">⬇ 导出 CSV</a>
+  </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="card" style="margin-bottom:16px">
+  <div class="btn-row">
+    <label class="field">月份
+      <select id="fMonth"><option value="all">全部</option></select>
+    </label>
+    <label class="field">分类
+      <select id="fCat"><option value="all">全部</option></select>
+    </label>
+    <label class="field">来源
+      <select id="fSrc"><option value="all">全部</option></select>
+    </label>
+    <label class="field">收支
+      <select id="fDir">
+        <option value="all">全部</option>
+        <option value="expense" selected>仅支出</option>
+        <option value="income">仅收入</option>
+        <option value="transfer">不计收支</option>
+      </select>
+    </label>
+    <label class="field">搜索
+      <input type="text" id="fKw" placeholder="商户 / 备注 / 分类" style="min-width:180px">
+    </label>
+    <button class="btn" onclick="resetFilter()" style="align-self:flex-end">重置</button>
+  </div>
+</div>
+
+<div id="emptyHint" style="display:none">
+  <div class="card">
+    <div class="empty">
+      <div class="big">💰</div>
+      <p>还没有账单数据。<br>支持导入支付宝 / 微信官方导出的 CSV，也可以手动记账。</p>
+      <div class="btn-row" style="justify-content:center">
+        <a class="btn primary" href="{{ url_for('import_page') }}">去导入账单</a>
+        <button class="btn" onclick="openAdd()">手动记一笔</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="content">
+  <div class="grid grid-4" style="margin-bottom:16px">
+    <div class="stat red">
+      <div class="label">支出</div><div class="value" id="kExpense">—</div>
+      <div class="foot" id="kExpenseFoot"></div>
+    </div>
+    <div class="stat green">
+      <div class="label">收入</div><div class="value" id="kIncome">—</div>
+      <div class="foot" id="kIncomeFoot"></div>
+    </div>
+    <div class="stat">
+      <div class="label">笔数</div><div class="value" id="kCount">—</div>
+      <div class="foot" id="kCountFoot"></div>
+    </div>
+    <div class="stat orange">
+      <div class="label">最大单笔</div><div class="value" id="kMax">—</div>
+      <div class="foot" id="kMaxFoot"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-1-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">分类占比</div>
+      <div id="pie"></div>
+      <div class="legend" id="legend" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span>月度趋势</span><span class="tag">柱=支出 线=结余</span>
+      </div>
+      <div id="trend"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">
+      <span>明细</span>
+      <span class="tag">点分类标签可直接改 · 改完会自动记住</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:120px">时间</th>
+            <th style="width:110px">分类</th>
+            <th>交易对方</th>
+            <th>说明</th>
+            <th style="width:80px">来源</th>
+            <th class="num" style="width:100px">金额</th>
+            <th style="width:60px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="muted" id="moreHint" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const els = {
+  month: document.getElementById("fMonth"),
+  cat: document.getElementById("fCat"),
+  src: document.getElementById("fSrc"),
+  dir: document.getElementById("fDir"),
+  kw: document.getElementById("fKw"),
+};
+
+function qs() {
+  const p = new URLSearchParams({
+    month: els.month.value, category: els.cat.value,
+    source: els.src.value, direction: els.dir.value,
+    q: els.kw.value.trim(), limit: 500
+  });
+  return p.toString();
+}
+
+async function loadFilters() {
+  const t = await fetch("/api/monthly_trend?months=120").then(r => r.json());
+  const months = t.months.slice().reverse();
+  els.month.innerHTML = `<option value="all">全部</option>` +
+    months.map(m => `<option value="${m}" ${m === "{{ now_month }}" ? "selected" : ""}>${m}</option>`).join("");
+
+  const cats = await fetch("/api/categories").then(r => r.json());
+  els.cat.innerHTML = `<option value="all">全部</option>` +
+    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+  const srcs = {{ sources|tojson }};
+  els.src.innerHTML = `<option value="all">全部</option>` +
+    srcs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+}
+
+async function render() {
+  const m = els.month.value === "all" ? "{{ now_month }}" : els.month.value;
+  const [sum, trend, rows] = await Promise.all([
+    fetch(`/api/summary?month=${m}`).then(r => r.json()),
+    fetch("/api/monthly_trend?months=12").then(r => r.json()),
+    fetch("/api/transactions?" + qs()).then(r => r.json()),
+  ]);
+
+  const hasData = await fetch("/api/transactions?limit=1").then(r => r.json()).then(r => r.length > 0);
+  document.getElementById("emptyHint").style.display = hasData ? "none" : "";
+  document.getElementById("content").style.display = hasData ? "" : "none";
+  if (!hasData) return;
+
+  // 当前筛选下的合计（方向与筛选一致）
+  const filteredExpense = rows.filter(r => r.direction === "expense");
+  const filteredIncome = rows.filter(r => r.direction === "income");
+  const sumExp = filteredExpense.reduce((a, b) => a + b.amount, 0);
+  const sumInc = filteredIncome.reduce((a, b) => a + b.amount, 0);
+  const maxRow = filteredExpense.reduce((a, b) => (a && a.amount >= b.amount) ? a : b, null);
+
+  document.getElementById("kExpense").textContent = money0(sumExp);
+  document.getElementById("kExpenseFoot").textContent =
+    els.month.value === "all" ? "全部区间" : `${m} · 环比 ${sum.mom === null ? "—" : (sum.mom > 0 ? "↑" : "↓") + Math.abs(sum.mom) + "%"}`;
+  document.getElementById("kIncome").textContent = money0(sumInc);
+  document.getElementById("kIncomeFoot").textContent = `${filteredIncome.length} 笔`;
+  document.getElementById("kCount").textContent = rows.length;
+  document.getElementById("kCountFoot").textContent = `支出 ${filteredExpense.length} · 收入 ${filteredIncome.length}`;
+  document.getElementById("kMax").textContent = maxRow ? money0(maxRow.amount) : "—";
+  document.getElementById("kMaxFoot").textContent = maxRow ? esc(maxRow.counterparty || maxRow.description || "").slice(0, 14) : "";
+
+  // 饼图（基于当前筛选出的支出）
+  const byCat = {};
+  filteredExpense.forEach(r => { byCat[r.category] = (byCat[r.category] || 0) + r.amount; });
+  const pieData = Object.entries(byCat).sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => ({ name: k, value: v, color: catColor(k) }));
+  Charts.DonutChart(document.getElementById("pie"), {
+    data: pieData, size: 200, thickness: 26,
+    centerValue: money0(sumExp), centerLabel: "支出合计"
+  });
+  const tot = sumExp || 1;
+  document.getElementById("legend").innerHTML = pieData.slice(0, 12).map(d => `
+    <div class="legend-item">
+      <span class="dot" style="background:${d.color}"></span>
+      <span class="name">${esc(d.name)}</span>
+      <span class="val">${money0(d.value)}</span>
+      <span class="pct">${(d.value / tot * 100).toFixed(1)}%</span>
+    </div>`).join("") || `<div class="muted">当前筛选下没有支出</div>`;
+
+  // 月度趋势
+  Charts.BarChart(document.getElementById("trend"), {
+    labels: trend.months.map(x => x.slice(5) + "月"),
+    series: [
+      { name: "支出", data: trend.expense, color: "#ff6b6b" },
+      { name: "结余", data: trend.balance, color: "#5c7cfa", type: "line" },
+    ],
+    height: 250, tipLabel: (lb, i) => trend.months[i] || lb
+  });
+
+  // 表格
+  document.getElementById("tbody").innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td class="muted" style="white-space:nowrap">${r.occurred_at.slice(5)}</td>
+      <td><span class="chip editable" onclick="editCat(${r.id}, '${esc(r.category)}')">
+        <span class="dot" style="background:${catColor(r.category)}"></span>${esc(r.category)}</span></td>
+      <td class="ellip">${esc(r.counterparty || "—")}</td>
+      <td class="ellip muted">${esc(r.description || "")}</td>
+      <td class="muted" style="white-space:nowrap">${esc(r.source)}</td>
+      <td class="num ${r.direction === 'income' ? 'amount-in' : (r.direction === 'expense' ? 'amount-out' : 'muted')}">
+        ${r.direction === "income" ? "+" : (r.direction === "expense" ? "-" : "")}${money(r.amount)}</td>
+      <td><button class="btn sm danger" onclick="delTx(${r.id})">删</button></td>
+    </tr>`).join("") : `<tr><td colspan="7" class="empty">没有符合条件的记录</td></tr>`;
+
+  document.getElementById("moreHint").textContent =
+    rows.length >= 500 ? "仅显示最近 500 条，可用筛选条件缩小范围" : `共 ${rows.length} 条`;
+}
+
+/* ---------- 改分类 ---------- */
+async function editCat(id, current) {
+  const cats = await fetch("/api/categories").then(r => r.json());
+  const uniq = Array.from(new Set([...cats, "餐饮", "交通", "购物", "居住", "娱乐", "医疗", "学习", "其他"]));
+  openModal(`
+    <h3>修改分类</h3>
+    <label class="field" style="margin-bottom:12px">选一个已有分类
+      <select id="catSel">${uniq.map(c =>
+        `<option value="${esc(c)}" ${c === current ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+    </label>
+    <label class="field">或者输入新分类
+      <input type="text" id="catNew" placeholder="留空则用上面选的">
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--text)">
+      <input type="checkbox" id="catLearn" checked style="width:auto"> 记住这个商户，以后自动归到此类
+    </label>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveCat(${id})">保存</button>
+    </div>`);
+}
+async function saveCat(id) {
+  const sel = document.getElementById("catSel").value;
+  const nw = document.getElementById("catNew").value.trim();
+  const learn = document.getElementById("catLearn").checked;
+  await api(`/api/transactions/${id}/category`, {
+    method: "PATCH", body: { category: nw || sel, learn }
+  });
+  closeModal();
+  toast("已更新分类", "ok");
+  render();
+}
+async function delTx(id) {
+  if (!confirm("确定删除这条记录？")) return;
+  await api(`/api/transactions/${id}`, { method: "DELETE" });
+  toast("已删除", "ok");
+  render();
+}
+async function reclassify() {
+  if (!confirm("将按当前规则重新分类所有「未手动改过」的记录，继续？")) return;
+  const r = await api("/api/reclassify", { method: "POST" });
+  toast(`已重新分类 ${r.changed} 条`, "ok");
+  render();
+}
+
+/* ---------- 手动记账 ---------- */
+function openAdd() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  openModal(`
+    <h3>记一笔</h3>
+    <div class="checkin-grid">
+      <label class="field">金额
+        <input type="number" id="aAmount" step="0.01" placeholder="0.00" autofocus>
+      </label>
+      <label class="field">类型
+        <select id="aDir">
+          <option value="expense">支出</option>
+          <option value="income">收入</option>
+        </select>
+      </label>
+      <label class="field">时间
+        <input type="datetime-local" id="aTime" value="${nowStr}">
+      </label>
+      <label class="field">来源
+        <select id="aSrc">
+          <option value="手动">手动</option><option value="支付宝">支付宝</option>
+          <option value="微信">微信</option><option value="银行卡">银行卡</option>
+          <option value="现金">现金</option>
+        </select>
+      </label>
+      <label class="field">交易对方
+        <input type="text" id="aParty" placeholder="如：楼下面馆">
+      </label>
+      <label class="field">分类（留空自动判断）
+        <input type="text" id="aCat" placeholder="自动">
+      </label>
+    </div>
+    <label class="field" style="margin-top:12px">备注
+      <input type="text" id="aDesc" placeholder="选填">
+    </label>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveAdd()">保存</button>
+    </div>`);
+}
+async function saveAdd() {
+  const amount = parseFloat(document.getElementById("aAmount").value);
+  if (!amount || amount <= 0) { toast("请输入金额", "error"); return; }
+  await api("/api/transactions", {
+    method: "POST",
+    body: {
+      amount, direction: document.getElementById("aDir").value,
+      occurred_at: document.getElementById("aTime").value,
+      source: document.getElementById("aSrc").value,
+      counterparty: document.getElementById("aParty").value,
+      category: document.getElementById("aCat").value,
+      description: document.getElementById("aDesc").value,
+    }
+  });
+  closeModal();
+  toast("已记录", "ok");
+  await loadFilters();
+  render();
+}
+
+function resetFilter() {
+  els.month.value = "{{ now_month }}";
+  els.cat.value = "all"; els.src.value = "all";
+  els.dir.value = "expense"; els.kw.value = "";
+  render();
+}
+
+["month", "cat", "src", "dir"].forEach(k => els[k].addEventListener("change", render));
+let kwTimer;
+els.kw.addEventListener("input", () => {
+  clearTimeout(kwTimer); kwTimer = setTimeout(render, 300);
+});
+window.addEventListener("themechange", () => setTimeout(render, 30));
+
+(async function init() {
+  await loadFilters();
+  await render();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="health">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>习惯健康</h1>
+        <div class="sub">每天 20 秒打卡，慢慢看出规律</div>
+      </div>
+      <div class="btn-row">
+        <select id="rangeSel">
+          <option value="30">近 30 天</option>
+          <option value="90" selected>近 90 天</option>
+          <option value="180">近 180 天</option>
+          <option value="365">近 1 年</option>
+        </select>
+        <button class="btn" onclick="exportHealthCsv()">⬇ 导出 CSV</button>
+      </div>
+    </div>
+
+    <div id="emptyHint" style="display:none">
+      <div class="card">
+        <div class="empty">
+          <div class="big">❤️</div>
+          <p>还没有打卡记录。<br>先记录今天，之后每天花 20 秒补上就行。</p>
+          <div class="btn-row" style="justify-content:center">
+            <button class="btn primary" onclick="openCheckin()">开始打卡</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="content">
+      <!-- 今日打卡 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">
+          <span>今日打卡</span>
+          <span class="tag">同一天再次提交会覆盖</span>
+        </div>
+        <div class="checkin-grid">
+          <label class="field">
+            <span class="range-head"><span>日期</span></span>
+            <input type="date" id="cDay">
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>睡眠时长</span><b id="vSleep">0 h</b></span>
+            <input type="range" id="cSleep" min="0" max="12" step="0.5" value="0"
+                   oninput="document.getElementById('vSleep').textContent=this.value+' h'">
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>睡眠质量</span><b id="vSleepScore">—</b></span>
+            <div class="stars" id="cSleepScore">
+              <span class="star" data-v="1">⭐</span><span class="star" data-v="2">⭐</span>
+              <span class="star" data-v="3">⭐</span><span class="star" data-v="4">⭐</span>
+              <span class="star" data-v="5">⭐</span>
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>心情</span><b id="vMood">—</b></span>
+            <div class="stars" id="cMood">
+              <span class="star" data-v="1">😞</span><span class="star" data-v="2">😕</span>
+              <span class="star" data-v="3">😐</span><span class="star" data-v="4">🙂</span>
+              <span class="star" data-v="5">😄</span>
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>体重 (kg)</span></span>
+            <input type="number" id="cWeight" step="0.1" placeholder="选填">
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>运动 (分钟)</span></span>
+            <input type="number" id="cExercise" step="5" placeholder="0">
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>步数</span></span>
+            <input type="number" id="cSteps" step="100" placeholder="选填">
+          </label>
+
+          <label class="field">
+            <span class="range-head"><span>专注时长 (h)</span></span>
+            <input type="number" id="cFocus" step="0.5" placeholder="选填">
+          </label>
+        </div>
+
+        <label class="field" style="margin-top:14px">今日备注
+          <input type="text" id="cNote" placeholder="今天做了什么 / 身体感觉如何（选填）">
+        </label>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn primary" onclick="saveCheckin()">💾 保存打卡</button>
+          <button class="btn" onclick="clearForm()">清空</button>
+          <span class="muted" id="saveHint" style="font-size:12px"></span>
+        </div>
+      </div>
+
+      <!-- 统计 -->
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="stat purple">
+          <div class="label">平均睡眠</div><div class="value" id="sSleep">—</div>
+          <div class="foot" id="sSleepFoot"></div>
+        </div>
+        <div class="stat teal">
+          <div class="label">平均心情</div><div class="value" id="sMood">—</div>
+          <div class="foot" id="sMoodFoot"></div>
+        </div>
+        <div class="stat green">
+          <div class="label">连续打卡</div><div class="value" id="sStreak">—</div>
+          <div class="foot" id="sStreakFoot"></div>
+        </div>
+        <div class="stat orange">
+          <div class="label">体重变化</div><div class="value" id="sWeight">—</div>
+          <div class="foot" id="sWeightFoot"></div>
+        </div>
+      </div>
+
+      <!-- 趋势图 -->
+      <div class="grid grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">睡眠时长 <span class="tag" id="tSleep"></span></div>
+          <div id="chartSleep"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">心情 & 睡眠质量 <span class="tag">1-5 分</span></div>
+          <div id="chartMood"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">体重趋势 <span class="tag" id="tWeight"></span></div>
+          <div id="chartWeight"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">运动 & 专注 <span class="tag">分钟 / 小时</span></div>
+          <div id="chartEx"></div>
+        </div>
+      </div>
+
+      <!-- 打卡热力图 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">
+          <span>打卡日历</span>
+          <span class="tag">颜色越深，睡得越久 / 运动越多</span>
+        </div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+
+      <!-- 记录列表 -->
+      <div class="card">
+        <div class="card-title">
+          <span>最近记录</span><span class="tag" id="listTag"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:110px">日期</th><th class="num">睡眠</th><th class="num">质量</th>
+                <th class="num">心情</th><th class="num">体重</th><th class="num">运动</th>
+                <th class="num">步数</th><th class="num">专注</th>
+                <th>备注</th><th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody id="hb"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-health.js"></script>
+</body>
+</html>

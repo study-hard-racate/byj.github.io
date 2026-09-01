@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="report">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>年度报告</h1>
+        <div class="sub">这一年，钱花在了哪，状态怎么样</div>
+      </div>
+      <div class="btn-row">
+        <select id="yearSel" style="min-width:120px"></select>
+      </div>
+    </div>
+
+    <div id="emptyAll" style="display:none">
+      <div class="card">
+        <div class="empty">
+          <div class="big">📈</div>
+          <p>还没有足够的数据生成报告。<br>先导入账单、坚持打卡一段时间再来。</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="content">
+      <!-- 财务总览 -->
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="stat red">
+          <div class="label">年度支出</div><div class="value" id="yExpense">—</div>
+          <div class="foot" id="yExpenseFoot"></div>
+        </div>
+        <div class="stat green">
+          <div class="label">年度收入</div><div class="value" id="yIncome">—</div>
+          <div class="foot" id="yIncomeFoot"></div>
+        </div>
+        <div class="stat">
+          <div class="label">年度结余</div><div class="value" id="yBalance">—</div>
+          <div class="foot" id="yBalanceFoot"></div>
+        </div>
+        <div class="stat orange">
+          <div class="label">日均支出</div><div class="value" id="yAvg">—</div>
+          <div class="foot" id="yAvgFoot"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-1-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">年度支出构成</div>
+          <div id="pieBox"></div>
+          <div class="legend" id="pieLegend" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">月度收支 <span class="tag" id="trendTag"></span></div>
+          <div id="trendBox"></div>
+        </div>
+      </div>
+
+      <!-- 年度之最 -->
+      <div class="grid grid-3" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">🏆 最大单笔支出</div>
+          <div id="biggestBox" class="muted" style="font-size:13px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏪 花钱最多的商户</div>
+          <div id="topMerchantBox" class="muted" style="font-size:13px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">☕ 一些有意思的数字</div>
+          <div id="funBox" class="muted" style="font-size:13px;line-height:2"></div>
+        </div>
+      </div>
+
+      <!-- 健康年度总结 -->
+      <div class="card">
+        <div class="card-title">❤️ 健康年度总结 <span class="tag" id="healthYearTag"></span></div>
+        <div class="grid grid-4" style="margin-bottom:8px">
+          <div class="stat purple">
+            <div class="label">打卡天数</div><div class="value" id="hDays">—</div>
+            <div class="foot">这一年</div>
+          </div>
+          <div class="stat teal">
+            <div class="label">平均睡眠</div><div class="value" id="hSleep">—</div>
+            <div class="foot" id="hSleepFoot"></div>
+          </div>
+          <div class="stat green">
+            <div class="label">总运动</div><div class="value" id="hExercise">—</div>
+            <div class="foot" id="hExerciseFoot"></div>
+          </div>
+          <div class="stat orange">
+            <div class="label">体重变化</div><div class="value" id="hWeight">—</div>
+            <div class="foot" id="hWeightFoot"></div>
+          </div>
+        </div>
+        <div id="healthExtra" style="font-size:13px;color:var(--text-dim);line-height:2"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-report.js"></script>
+</body>
+</html>

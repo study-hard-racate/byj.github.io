@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}个人看板{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">📊</div>
+      <div class="brand-text">
+        <strong>个人看板</strong>
+        <span>Finance & Health</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="{{ url_for('index') }}" class="nav-item {{ 'active' if active=='index' }}">
+        <span class="ico">🏠</span><span>总览</span>
+      </a>
+      <a href="{{ url_for('finance_page') }}" class="nav-item {{ 'active' if active=='finance' }}">
+        <span class="ico">💰</span><span>财务账单</span>
+      </a>
+      <a href="{{ url_for('health_page') }}" class="nav-item {{ 'active' if active=='health' }}">
+        <span class="ico">❤️</span><span>习惯健康</span>
+      </a>
+      <a href="{{ url_for('import_page') }}" class="nav-item {{ 'active' if active=='import' }}">
+        <span class="ico">📥</span><span>导入与规则</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
+        <span id="themeIcon">🌙</span> <span id="themeText">深色</span>
+      </button>
+      <div class="hint">数据只存在你本地电脑的<br><code>data/app.db</code></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>window.CAT_COLORS = {{ cat_colors|tojson }};</script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="finance">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>财务账单</h1>
+        <div class="sub">导入 → 自动分类 → 看清钱去哪了</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="openAdd()">＋ 记一笔</button>
+        <button class="btn" onclick="reclassify()">🔄 重跑分类</button>
+        <button class="btn" onclick="exportCsv()">⬇ 导出 CSV</button>
+        <a class="btn" href="import.html">📥 导入</a>
+      </div>
+    </div>
+
+    <div id="banners"></div>
+
+    <!-- 筛选栏 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="btn-row">
+        <label class="field">月份
+          <select id="fMonth"><option value="all">全部</option></select>
+        </label>
+        <label class="field">分类
+          <select id="fCat"><option value="all">全部</option></select>
+        </label>
+        <label class="field">来源
+          <select id="fSrc"><option value="all">全部</option></select>
+        </label>
+        <label class="field">收支
+          <select id="fDir">
+            <option value="all">全部</option>
+            <option value="expense" selected>仅支出</option>
+            <option value="income">仅收入</option>
+            <option value="transfer">不计收支</option>
+          </select>
+        </label>
+        <label class="field">搜索
+          <input type="search" id="fKw" placeholder="商户 / 备注 / 分类" style="min-width:180px">
+        </label>
+        <button class="btn" onclick="resetFilter()" style="align-self:flex-end">重置</button>
+      </div>
+    </div>
+
+    <div id="emptyHint" style="display:none">
+      <div class="card">
+        <div class="empty">
+          <div class="big">💰</div>
+          <p>还没有账单数据。<br>支持导入支付宝 / 微信官方导出的 CSV，也可以手动记账。</p>
+          <div class="btn-row" style="justify-content:center">
+            <a class="btn primary" href="import.html">去导入账单</a>
+            <button class="btn" onclick="openAdd()">手动记一笔</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="content">
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="stat red">
+          <div class="label">支出</div><div class="value" id="kExpense">—</div>
+          <div class="foot" id="kExpenseFoot"></div>
+        </div>
+        <div class="stat green">
+          <div class="label">收入</div><div class="value" id="kIncome">—</div>
+          <div class="foot" id="kIncomeFoot"></div>
+        </div>
+        <div class="stat">
+          <div class="label">笔数</div><div class="value" id="kCount">—</div>
+          <div class="foot" id="kCountFoot"></div>
+        </div>
+        <div class="stat orange">
+          <div class="label">最大单笔</div><div class="value" id="kMax">—</div>
+          <div class="foot" id="kMaxFoot"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-1-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">分类占比</div>
+          <div id="pie"></div>
+          <div class="legend" id="legend" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span>月度趋势</span><span class="tag">柱=支出 线=结余</span>
+          </div>
+          <div id="trend"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>明细</span>
+          <span class="tag">点分类标签可直接改 · 改完会自动记住</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:120px">时间</th>
+                <th style="width:120px">分类</th>
+                <th>交易对方</th>
+                <th>说明</th>
+                <th style="width:80px">来源</th>
+                <th class="num" style="width:100px">金额</th>
+                <th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="muted" id="moreHint" style="margin-top:10px;font-size:12px"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-finance.js"></script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}总览 · 个人看板{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>总览</h1>
+    <div class="sub">钱花在哪了 + 最近状态怎么样，一屏看完</div>
+  </div>
+  <div class="btn-row">
+    <select id="monthSel" style="min-width:120px"></select>
+    <a class="btn" href="{{ url_for('import_page') }}">📥 导入账单</a>
+  </div>
+</div>
+
+<div id="emptyAll" style="display:none">
+  <div class="card">
+    <div class="empty">
+      <div class="big">📊</div>
+      <p>还没有任何数据。<br>先导入一份支付宝 / 微信账单，或者手动记一笔。</p>
+      <div class="btn-row" style="justify-content:center">
+        <a class="btn primary" href="{{ url_for('import_page') }}">去导入账单</a>
+        <a class="btn" href="{{ url_for('health_page') }}">先去打卡</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mainContent">
+  <!-- 统计卡 -->
+  <div class="grid grid-4" style="margin-bottom:16px">
+    <div class="stat red">
+      <div class="label">本月支出</div>
+      <div class="value" id="sExpense">—</div>
+      <div class="foot" id="sExpenseFoot"></div>
+    </div>
+    <div class="stat green">
+      <div class="label">本月收入</div>
+      <div class="value" id="sIncome">—</div>
+      <div class="foot" id="sIncomeFoot"></div>
+    </div>
+    <div class="stat">
+      <div class="label">本月结余</div>
+      <div class="value" id="sBalance">—</div>
+      <div class="foot" id="sBalanceFoot"></div>
+    </div>
+    <div class="stat orange">
+      <div class="label">日均支出</div>
+      <div class="value" id="sAvg">—</div>
+      <div class="foot" id="sAvgFoot"></div>
+    </div>
+  </div>
+
+  <!-- 分类 + 趋势 -->
+  <div class="grid grid-1-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">支出构成 <span class="tag" id="catTag"></span></div>
+      <div id="pieBox"></div>
+      <div class="legend" id="pieLegend" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span>近 12 个月收支</span>
+        <span class="tag">柱=支出 / 线=结余</span>
+      </div>
+      <div id="trendBox"></div>
+    </div>
+  </div>
+
+  <!-- 每日走势 + 健康速览 -->
+  <div class="grid grid-2-1" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">本月每日支出 <span class="tag" id="dailyTag"></span></div>
+      <div id="dailyBox"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span>健康速览</span>
+        <a class="tag" href="{{ url_for('health_page') }}" style="color:var(--accent)">去打卡 →</a>
+      </div>
+      <div id="healthMini"></div>
+    </div>
+  </div>
+
+  <!-- 花钱大户 -->
+  <div class="card">
+    <div class="card-title">本月花钱最多的地方 <span class="tag">Top 8</span></div>
+    <div id="topBox"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const monthSel = document.getElementById("monthSel");
+
+function currentMonth() {
+  return monthSel.value || "{{ now_month }}";
+}
+
+async function loadMonths() {
+  const r = await fetch("/api/monthly_trend?months=120").then(r => r.json());
+  const months = r.months.slice().reverse();
+  if (!months.length) months.push("{{ now_month }}");
+  monthSel.innerHTML = months.map(m =>
+    `<option value="${m}" ${m === "{{ now_month }}" ? "selected" : ""}>${m}</option>`
+  ).join("");
+  return months;
+}
+
+async function render() {
+  const m = currentMonth();
+  const [sum, trend, daily, health] = await Promise.all([
+    fetch(`/api/summary?month=${m}`).then(r => r.json()),
+    fetch("/api/monthly_trend?months=12").then(r => r.json()),
+    fetch(`/api/daily_trend?month=${m}`).then(r => r.json()),
+    fetch("/api/health?days=30").then(r => r.json()),
+  ]);
+
+  const hasFinance = sum.expense_count > 0 || sum.income > 0;
+  const hasHealth = health.stats.records > 0;
+  document.getElementById("emptyAll").style.display = (hasFinance || hasHealth) ? "none" : "";
+  document.getElementById("mainContent").style.display = (hasFinance || hasHealth) ? "" : "none";
+
+  // 统计卡
+  document.getElementById("sExpense").textContent = money0(sum.expense);
+  document.getElementById("sExpenseFoot").innerHTML = sum.mom === null
+    ? `共 ${sum.expense_count} 笔`
+    : `环比 <span class="${sum.mom > 0 ? 'up' : 'down'}">${sum.mom > 0 ? '↑' : '↓'} ${Math.abs(sum.mom)}%</span> · ${sum.expense_count} 笔`;
+  document.getElementById("sIncome").textContent = money0(sum.income);
+  document.getElementById("sIncomeFoot").textContent = `已过 ${sum.passed_days} / ${sum.days_in_month} 天`;
+  const bal = document.getElementById("sBalance");
+  bal.textContent = money0(sum.balance);
+  bal.style.color = sum.balance >= 0 ? "var(--green)" : "var(--red)";
+  document.getElementById("sBalanceFoot").textContent =
+    sum.income > 0 ? `支出占收入 ${(sum.expense / sum.income * 100).toFixed(0)}%` : "暂无收入记录";
+  document.getElementById("sAvg").textContent = money0(sum.avg_daily);
+  document.getElementById("sAvgFoot").textContent =
+    sum.avg_daily > 0 ? `按此速度本月约 ${money0(sum.avg_daily * sum.days_in_month)}` : "—";
+
+  // 环形图
+  const cats = sum.categories.slice(0, 9);
+  const other = sum.categories.slice(9).reduce((a, b) => a + b.value, 0);
+  const pieData = cats.map(c => ({ name: c.name, value: c.value, color: c.color || catColor(c.name) }));
+  if (other > 0) pieData.push({ name: "其他", value: other, color: "#868e96" });
+  Charts.DonutChart(document.getElementById("pieBox"), {
+    data: pieData, size: 200, thickness: 26,
+    centerValue: money0(sum.expense), centerLabel: "本月支出"
+  });
+
+  const total = sum.expense || 1;
+  document.getElementById("pieLegend").innerHTML = pieData.map(d => `
+    <div class="legend-item">
+      <span class="dot" style="background:${d.color}"></span>
+      <span class="name">${esc(d.name)}</span>
+      <span class="val">${money0(d.value)}</span>
+      <span class="pct">${(d.value / total * 100).toFixed(1)}%</span>
+    </div>`).join("") || `<div class="muted">本月还没有支出记录</div>`;
+  document.getElementById("catTag").textContent =
+    sum.uncategorized ? `${sum.uncategorized} 笔未分类` : `${pieData.length} 类`;
+
+  // 月度趋势：柱=支出，线=结余（叠加在同一张图）
+  Charts.BarChart(document.getElementById("trendBox"), {
+    labels: trend.months.map(m => m.slice(5) + "月"),
+    series: [
+      { name: "支出", data: trend.expense, color: "#ff6b6b" },
+      { name: "结余", data: trend.balance, color: "#5c7cfa", type: "line" },
+    ],
+    height: 250,
+    tipLabel: (lb, i) => trend.months[i] || lb
+  });
+
+  // 每日走势
+  Charts.LineChart(document.getElementById("dailyBox"), {
+    labels: daily.labels,
+    series: [{ name: "支出", data: daily.values, color: "#ffa94d" }],
+    height: 230,
+    tipLabel: (lb) => `${m}-${String(lb).padStart(2, "0")}`,
+    tipFormat: v => money(v)
+  });
+  const maxDay = Math.max(...daily.values, 0);
+  document.getElementById("dailyTag").textContent = maxDay > 0 ? `单日最高 ${money0(maxDay)}` : "";
+
+  // Top 商户
+  const tops = sum.top_merchants.slice(0, 8);
+  const maxTop = tops.length ? tops[0].value : 1;
+  document.getElementById("topBox").innerHTML = tops.length ? tops.map(t => `
+    <div class="bar-row">
+      <div class="bar-head">
+        <span>${esc(t.name)}</span>
+        <b style="color:var(--text-dim);font-weight:600">${money0(t.value)}</b>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(t.value / maxTop * 100).toFixed(1)}%;
+             background:linear-gradient(90deg,#ff6b6b,#ffa94d)"></div>
+      </div>
+    </div>`).join("") : emptyState("🛒", "本月还没有支出记录");
+
+  // 健康速览
+  const st = health.stats;
+  document.getElementById("healthMini").innerHTML = hasHealth ? `
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat purple" style="padding:12px 14px">
+        <div class="label">平均睡眠</div>
+        <div class="value" style="font-size:20px">${st.avg_sleep}<small>h</small></div>
+      </div>
+      <div class="stat teal" style="padding:12px 14px">
+        <div class="label">平均心情</div>
+        <div class="value" style="font-size:20px">${st.avg_mood}<small>/5</small></div>
+      </div>
+    </div>
+    <div style="font-size:12.5px;color:var(--text-dim);line-height:2">
+      近 30 天打卡 <b style="color:var(--text)">${st.records}</b> 天 ·
+      连续 <b style="color:var(--accent)">${st.streak}</b> 天<br>
+      平均运动 <b style="color:var(--text)">${st.avg_exercise}</b> 分钟 ·
+      达标 <b style="color:var(--green)">${st.good_days}</b> 天<br>
+      ${st.weight_now ? `体重 <b style="color:var(--text)">${st.weight_now}</b> kg
+        <span style="color:${st.weight_delta <= 0 ? 'var(--green)' : 'var(--red)'}">
+          (${st.weight_delta > 0 ? '+' : ''}${st.weight_delta})</span>` : '还没有记录体重'}
+    </div>` : emptyState("❤️", "还没有健康打卡记录",
+      `<a class="btn primary" href="{{ url_for('health_page') }}">去打卡</a>`);
+}
+
+monthSel.addEventListener("change", render);
+window.addEventListener("themechange", () => setTimeout(render, 30));
+
+(async function init() {
+  await loadMonths();
+  await render();
+})();
+</script>
+{% endblock %}

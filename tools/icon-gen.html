@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>icon generator</title></head>
+<body style="margin:0;background:#0e1016">
+<canvas id="cAny512" width="512" height="512" style="width:512px;height:512px"></canvas>
+<canvas id="cAny192" width="192" height="192" style="width:192px;height:192px"></canvas>
+<canvas id="cMask512" width="512" height="512" style="width:512px;height:512px"></canvas>
+<script>
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function draw(canvas, maskable) {
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+  // 背景铺满（maskable 必须不透明，内容在安全区内）
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, "#5c7cfa");
+  grad.addColorStop(1, "#b197fc");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  // 中央方块：any 版铺满，maskable 版缩到 60%（安全区）
+  const s = maskable ? size * 0.62 : size;
+  const off = (size - s) / 2;
+  const g2 = ctx.createLinearGradient(off, off, off + s, off + s);
+  g2.addColorStop(0, "#5c7cfa");
+  g2.addColorStop(1, "#b197fc");
+  roundRect(ctx, off, off, s, s, s * 0.22);
+  ctx.fillStyle = g2;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.28)";
+  ctx.lineWidth = Math.max(2, s * 0.02);
+  ctx.stroke();
+  // 字母 B
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 " + (s * 0.52) + "px Arial, Helvetica, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("B", size / 2, size / 2 + s * 0.03);
+}
+draw(document.getElementById("cAny512"), false);
+draw(document.getElementById("cAny192"), false);
+draw(document.getElementById("cMask512"), true);
+</script>
+</body>
+</html>

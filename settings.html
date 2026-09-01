@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="settings">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>设置</h1>
+        <div class="sub">品牌 · 预算 · 提醒 · 数据管理</div>
+      </div>
+    </div>
+
+    <!-- 品牌 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>🎨 品牌</span><span class="tag">显示在侧边栏和浏览器标题</span></div>
+      <div class="checkin-grid">
+        <label class="field">网站名称
+          <input type="text" id="setName" placeholder="BYJ 的个人看板">
+        </label>
+        <label class="field">副标题
+          <input type="text" id="setSub" placeholder="Finance & Health">
+        </label>
+        <label class="field">LOGO 文字
+          <input type="text" id="setLogo" maxlength="2" placeholder="B">
+        </label>
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" onclick="saveBrand()">保存品牌</button>
+        <span class="muted" style="font-size:12px">主题色在 <code>js/config.js</code> 的 accent 里改</span>
+      </div>
+    </div>
+
+    <!-- 预算 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>💰 本月预算</span><span class="tag">总览页显示进度条，超支会提醒</span></div>
+      <div class="btn-row">
+        <input type="number" id="setBudget" step="100" min="0" placeholder="如 3000" style="width:180px">
+        <button class="btn primary" onclick="saveBudget()">保存预算</button>
+        <button class="btn" onclick="clearBudget()">取消预算</button>
+        <span class="muted" id="budgetHint" style="font-size:12px"></span>
+      </div>
+    </div>
+
+    <!-- 提醒 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>⏰ 提醒</span><span class="tag">只在打开网站时生效（纯前端无法后台定时）</span></div>
+      <div class="checkin-grid">
+        <label class="field">打卡提醒时间（超过此钟点未打卡则提醒）
+          <input type="number" id="setHealthHour" min="0" max="23" value="20">
+        </label>
+        <label class="field">账单导入提醒日（每月几号还没导入则提醒）
+          <input type="number" id="setMonthlyDay" min="1" max="28" value="2">
+        </label>
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" onclick="saveReminder()">保存提醒设置</button>
+        <button class="btn" onclick="enableNotify()">🔔 开启系统通知</button>
+        <span class="muted" id="notifyHint" style="font-size:12px"></span>
+      </div>
+    </div>
+
+    <!-- 数据 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>💾 数据管理</span><span class="tag">所有数据都存在你的浏览器本地</span></div>
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="btn" onclick="exportData()">⬇ 导出备份（JSON）</button>
+        <button class="btn" onclick="document.getElementById('importFile').click()">⬆ 导入备份（JSON）</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+      </div>
+      <div class="muted" style="font-size:12.5px;line-height:1.9">
+        • 换电脑 / 换浏览器：导出 JSON → 在新浏览器打开本站 → 导入备份，数据就过去了。<br>
+        • 也可以随时把账单导出成 CSV（财务页 / 健康页顶部按钮），Excel 可直接打开。<br>
+        • 建议每月导出一次备份，或把 JSON 存到网盘。
+      </div>
+      <div class="btn-row" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+        <button class="btn" onclick="reseedDemo()">🧪 重新填充演示数据</button>
+        <button class="btn danger" onclick="clearData()">🗑️ 清空所有数据</button>
+      </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="card">
+      <div class="card-title"><span>ℹ️ 关于</span></div>
+      <div class="muted" style="font-size:12.5px;line-height:2">
+        BYJ 的个人看板 v<span id="ver"></span><br>
+        纯前端应用：账单在浏览器本地解析，数据存 IndexedDB，<b>不联网、不上传</b>。<br>
+        部署于 GitHub Pages。源码见仓库 <code>study-hard-racate/byj.github.io</code>。
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-settings.js"></script>
+</body>
+</html>

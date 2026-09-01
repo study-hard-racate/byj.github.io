@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYJ 的个人看板</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="import">
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="mobile-top" id="mobileTop"></div>
+  <main class="main">
+
+    <div class="page-head">
+      <div>
+        <h1>导入与规则</h1>
+        <div class="sub">导入账单 · 调教自动分类</div>
+      </div>
+    </div>
+
+    <div class="grid grid-1-2" style="margin-bottom:16px">
+      <!-- 导入 -->
+      <div class="card">
+        <div class="card-title">导入账单（CSV）</div>
+        <div class="btn-row" style="margin-bottom:12px">
+          <label class="field" style="flex:1">账单来源
+            <select id="srcSel">
+              <option value="">自动识别</option>
+              <option value="alipay">支付宝</option>
+              <option value="wechat">微信</option>
+              <option value="bank">银行卡</option>
+              <option value="generic">其他通用 CSV</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="dropZone" style="
+          border:2px dashed var(--border); border-radius:12px; padding:30px 20px;
+          text-align:center; cursor:pointer; transition:all .18s; background:var(--card-2)">
+          <div style="font-size:32px;margin-bottom:8px">📄</div>
+          <div style="font-size:13.5px;color:var(--text-dim)">
+            点击选择文件，或把文件拖到这里
+          </div>
+          <div class="muted" style="font-size:12px;margin-top:6px">
+            支持支付宝 / 微信导出的 CSV（GBK / UTF-8 自动识别）<br>
+            官方 zip 是加密的，请<b>先解压成 CSV</b> 再上传
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.txt" style="display:none">
+        </div>
+        <div id="fileName" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
+
+        <div id="parseBox" style="display:none;margin-top:14px">
+          <div id="parseInfo" style="padding:12px;border-radius:10px;background:var(--card-2);font-size:13px"></div>
+          <div class="table-wrap" style="margin-top:12px;max-height:260px;overflow-y:auto">
+            <table>
+              <thead><tr><th>时间</th><th>对方</th><th>说明</th><th class="num">金额</th></tr></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+          <button class="btn primary" id="confirmImport" style="margin-top:14px;width:100%;justify-content:center">
+            ✅ 确认导入
+          </button>
+        </div>
+
+        <div id="resultBox" style="display:none;margin-top:14px;padding:13px;border-radius:10px;
+                    background:rgba(81,207,102,.08);border-left:3px solid var(--green);font-size:13px"></div>
+      </div>
+
+      <!-- 说明 -->
+      <div class="card">
+        <div class="card-title">怎么导出账单？</div>
+        <div style="font-size:13px;line-height:1.9">
+          <div style="margin-bottom:14px">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px">🅰️ 支付宝</div>
+            <div class="muted">
+              App → 我的 → 账单 → 右上角「…」→ <b>开具交易流水证明</b> → 选择「用于个人对账」
+              → 选好时间范围 → 填邮箱 → 收到带解压码的 zip，<b>解压出 CSV</b> 后上传。
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px">💚 微信</div>
+            <div class="muted">
+              微信 → 我 → 服务 → 钱包 → 账单 → 右上角「…」→ <b>账单下载</b>
+              → 选择「用于个人对账」→ 选时间范围 → 邮件收到带密码的压缩包，<b>解压出 CSV</b> 后上传。
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px">🏦 银行卡</div>
+            <div class="muted">
+              各银行 App 一般都有「交易明细导出」，导出 CSV 后选「其他通用 CSV」上传即可。
+            </div>
+          </div>
+          <div style="padding:11px;border-radius:9px;background:var(--card-2);font-size:12.5px">
+            <b style="color:var(--orange)">隐私说明</b><br>
+            <span class="muted">
+              文件只在你的浏览器本地解析，<b>不会上传到任何服务器</b>。
+              支付宝/微信没有开放个人账单 API，官方 CSV 导入是最稳定合规的方式。
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分类规则 -->
+    <div class="card">
+      <div class="card-title">
+        <span>自动分类规则</span>
+        <span class="tag">导入时按关键词自动归类 · 在明细页改分类也会自动记住</span>
+      </div>
+
+      <div class="btn-row" style="margin-bottom:14px">
+        <input type="text" id="rKw" placeholder="关键词，如「蜜雪冰城」" style="min-width:180px">
+        <input type="text" id="rCat" placeholder="分类，如「餐饮·饮品」" style="min-width:180px">
+        <input type="number" id="rPrio" value="50" title="优先级" style="width:80px">
+        <button class="btn primary" onclick="addRule()">＋ 添加规则</button>
+        <button class="btn" onclick="reclassify()">🔄 用规则重跑分类</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>关键词</th><th>归类到</th><th class="num" style="width:80px">优先级</th>
+              <th style="width:60px"></th>
+            </tr>
+          </thead>
+          <tbody id="ruleBody"></tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:12px;font-size:12.5px">
+        内置了 100+ 条常见规则（瑞幸→餐饮·咖啡、滴滴→交通·打车、嘉立创→购物·元器件 等）。
+        你添加的规则优先级更高，会覆盖内置规则。
+      </div>
+    </div>
+
+  </main>
+</div>
+<nav class="bottom-nav" id="bottomNav"></nav>
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/page-import.js"></script>
+</body>
+</html>
