@@ -24,6 +24,10 @@ async function load() {
       : "当前浏览器不支持通知";
 
   document.getElementById("ver").textContent = APP_CONFIG.version;
+
+  // iOS 显示 Safari 手动添加指引
+  const iosHint = document.getElementById("iosHint");
+  if (iosHint && window.isIOSPWA) iosHint.style.display = "";
 }
 
 async function saveBrand() {

@@ -41,7 +41,8 @@ async function renderLayout() {
         <button class="theme-toggle" onclick="toggleTheme()">
           <span id="themeIcon">🌙</span> <span id="themeText">深色</span>
         </button>
-        <button class="theme-toggle" id="installBtn" style="display:none;margin-top:8px">
+        <button class="theme-toggle" id="installBtn" data-install-btn onclick="window.requestInstall()"
+                style="display:none;margin-top:8px">
           📲 安装到桌面
         </button>
         <div class="hint">数据只存在你的浏览器本地<br>可在「设置」里导出备份</div>
@@ -62,21 +63,27 @@ async function renderLayout() {
   const bottomNav = document.getElementById("bottomNav");
   if (bottomNav) bottomNav.innerHTML = bottomLinks;
 
-  // PWA 安装提示
-  let deferredPrompt = null;
+  // PWA 安装：beforeinstallprompt（Android Chrome 等），侧边栏/设置页按钮共用
+  let deferredInstall = null;
+  window.requestInstall = async () => {
+    if (!deferredInstall) {
+      toast("请在浏览器菜单里选择「安装应用 / 添加到主屏幕」", "");
+      return false;
+    }
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    document.querySelectorAll("[data-install-btn]").forEach(b => { b.style.display = "none"; });
+    return true;
+  };
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
-    deferredPrompt = e;
-    const btn = document.getElementById("installBtn");
-    if (btn) btn.style.display = "";
+    deferredInstall = e;
+    document.querySelectorAll("[data-install-btn]").forEach(b => { b.style.display = ""; });
   });
-  document.addEventListener("click", async (e) => {
-    if (e.target.closest("#installBtn") && deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-    }
-  });
+  // iOS 判断（Safari 没有 beforeinstallprompt，只能手动添加）
+  window.isIOSPWA = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   syncThemeBtn();
   const iconM = document.getElementById("themeIconM");

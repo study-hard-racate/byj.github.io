@@ -70,6 +70,26 @@
       </div>
     </div>
 
+    <!-- 安装到桌面 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span>📲 安装到桌面</span><span class="tag">全屏 App 体验 · 离线可用</span></div>
+      <div class="btn-row">
+        <button class="btn primary" data-install-btn onclick="window.requestInstall()" style="display:none">
+          📲 一键安装到桌面
+        </button>
+        <span class="muted" id="iosHint" style="display:none;font-size:12.5px;line-height:1.9">
+          iPhone/iPad：用 <b>Safari</b> 打开本站 → 点底部「分享」按钮（⬆️方框箭头）→
+          「添加到主屏幕」→ 确认。之后从桌面图标打开就是全屏 App。
+        </span>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:10px;line-height:1.9">
+        • Android：Chrome 打开本站会弹出「安装应用」提示；没弹的话点右上角 ⋮ →「安装应用」，
+          或等本站出现「一键安装」按钮（首次访问后触发）。<br>
+        • 装好后桌面会出现 <b>B</b> 字图标，点开即全屏运行，断网也能用。<br>
+        • ⚠️ 每个设备的数据是独立的：换设备后请在「数据管理」里导出备份 → 新设备导入。
+      </div>
+    </div>
+
     <!-- 数据 -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-title"><span>💾 数据管理</span><span class="tag">所有数据都存在你的浏览器本地</span></div>
