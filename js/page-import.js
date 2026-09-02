@@ -50,9 +50,13 @@ async function handleFile(file) {
     PARSED = Object.assign({}, parsed, { name: file.name });
     showPreview();
   } catch (e) {
-    PARSED = null;
-    document.getElementById("parseBox").style.display = "none";
-    toast("读取文件失败：" + e.message, "error");
+    // 兜底：解析器没捕获的异常也要显示出来，方便排查
+    PARSED = { records: [], meta: { source: "", total_rows: 0, skipped: 0, warnings: ["读取失败：" + e.message] }, name: file.name };
+    document.getElementById("parseBox").style.display = "";
+    document.getElementById("parseInfo").innerHTML =
+      `<span style="color:var(--red)">⚠ ${esc(e.message)}</span>`;
+    document.getElementById("previewBody").innerHTML = "";
+    document.getElementById("confirmImport").onclick = null;
   }
 }
 

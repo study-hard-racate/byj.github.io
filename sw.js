@@ -2,7 +2,7 @@
    sw.js —— Service Worker（PWA 离线缓存）
    缓存优先：首次联网打开后，断网也能正常使用。
    ========================================================= */
-const CACHE = "byj-dashboard-v1";
+const CACHE = "byj-dashboard-v2"; // 发布新版本时记得递增（旧缓存会被自动清理）
 const CORE = [
   "./",
   "./index.html",

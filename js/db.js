@@ -62,8 +62,21 @@ const DB = (() => {
 
   return {
     // ---------- 基础 ----------
-    getAll(store) {
-      return run(store, "readonly", s => req(s.getAll()));
+    async getAll(store) {
+      const arr = await run(store, "readonly", s => req(s.getAll()));
+      // 兜底：备份恢复/旧数据里的日期可能是字符串，统一转成 Date，避免页面崩溃
+      if (store === "transactions") {
+        for (const t of arr) {
+          if (!(t.occurred_at instanceof Date)) t.occurred_at = normalizeDate(t.occurred_at) || new Date(0);
+          if (t.created_at && !(t.created_at instanceof Date)) t.created_at = new Date(t.created_at);
+        }
+      } else if (store === "health_records") {
+        for (const r of arr) {
+          if (!(r.day instanceof Date)) r.day = normalizeDate(r.day) || new Date(0);
+          if (r.updated_at && !(r.updated_at instanceof Date)) r.updated_at = new Date(r.updated_at);
+        }
+      }
+      return arr;
     },
     add(store, obj) {
       return run(store, "readwrite", s => req(s.add(obj)));
@@ -349,12 +362,21 @@ const DB = (() => {
 
     // ---------- 备份 / 恢复 ----------
     async exportAll() {
+      // 日期统一转成「本地时间字符串」，跨设备/跨时区恢复也不乱
+      const txn = (await this.getAll("transactions")).map(t => Object.assign({}, t, {
+        occurred_at: fmtDateTime(t.occurred_at),
+        created_at: t.created_at ? new Date(t.created_at).toISOString() : "",
+      }));
+      const health = (await this.getAll("health_records")).map(r => Object.assign({}, r, {
+        day: dayKey(r.day),
+        updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : "",
+      }));
       return {
         app: "byj-dashboard",
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
-        transactions: await this.getAll("transactions"),
-        health_records: await this.getAll("health_records"),
+        transactions: txn,
+        health_records: health,
         category_rules: await this.getAll("category_rules"),
         settings: await this.getAll("settings"),
       };
@@ -365,8 +387,20 @@ const DB = (() => {
       await this.clear("health_records");
       await this.clear("category_rules");
       await this.clear("settings");
-      if (data.transactions.length) await this.bulkAdd("transactions", data.transactions);
-      if (data.health_records && data.health_records.length) await this.bulkAdd("health_records", data.health_records);
+      const txn = (data.transactions || []).map(t => {
+        const c = Object.assign({}, t);
+        c.occurred_at = normalizeDate(c.occurred_at) || new Date(0);
+        c.created_at = c.created_at ? new Date(c.created_at) : new Date();
+        return c;
+      });
+      const health = (data.health_records || []).map(r => {
+        const c = Object.assign({}, r);
+        c.day = normalizeDate(c.day) || new Date(0);
+        c.updated_at = c.updated_at ? new Date(c.updated_at) : new Date();
+        return c;
+      });
+      if (txn.length) await this.bulkAdd("transactions", txn);
+      if (health.length) await this.bulkAdd("health_records", health);
       if (data.category_rules && data.category_rules.length) await this.bulkAdd("category_rules", data.category_rules);
       if (data.settings && data.settings.length) {
         for (const s of data.settings) await this.put("settings", s);
@@ -376,6 +410,30 @@ const DB = (() => {
 })();
 
 /* ================= 工具 ================= */
+/**
+ * 把各种来源的时间值统一成 Date：
+ *  - Date 原样
+ *  - 数字时间戳
+ *  - "YYYY-MM-DD" → 本地零点
+ *  - ISO / 带时区偏移（旧备份）→ new Date()
+ *  - "YYYY-MM-DD HH:MM:SS" 等本地格式 → parseTime
+ */
+function normalizeDate(v) {
+  if (v instanceof Date) return v;
+  if (typeof v === "number") { const d = new Date(v); return isNaN(d) ? null : d; }
+  if (typeof v !== "string") return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
+  }
+  return parseTime(s);
+}
 function dayKey(d) {
   if (d instanceof Date) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   return String(d).slice(0, 10);
