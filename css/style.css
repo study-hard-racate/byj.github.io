@@ -184,6 +184,8 @@ tbody tr:last-child td { border-bottom: none; }
 .amount-in  { color: var(--green); font-weight: 600; }
 .muted { color: var(--text-faint); }
 .ellip { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-main { min-width: 0; }
+.p-note { display: none; } /* 桌面端备注走独立列；移动端（≤640px）作为副行显示 */
 
 /* 分类徽章 */
 .chip {
@@ -342,10 +344,33 @@ tbody tr:last-child td { border-bottom: none; }
   .btn { padding: 6px 10px; font-size: 12.5px; }
 }
 
-/* 移动端表格降列：小屏藏「说明」，超小屏再藏「来源」 */
+/* 移动端表格降列：≤640px 财务明细卡片化（表头隐藏，来源/备注在卡片内常显） */
 @media (max-width: 640px) {
   .desc-col { display: none; }
-}
-@media (max-width: 480px) {
-  .src-col { display: none; }
+
+  /* 财务明细卡片化：每行变卡片（时间+金额 / 对方+备注 / 分类·来源·删） */
+  .txn thead { display: none; }
+  .txn tbody tr {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 6px 10px; padding: 11px 12px; margin-bottom: 9px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 11px;
+  }
+  .txn tbody tr:last-child { margin-bottom: 0; }
+  .txn td { display: block; padding: 0; border-bottom: none; }
+  .txn .c-time  { order: 1; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .txn .c-amt   { order: 2; margin-left: auto; font-size: 15px; }
+  .txn .c-party { order: 3; width: 100%; min-width: 0; }
+  .txn .c-cat   { order: 4; }
+  .txn .src-col { order: 5; display: block; font-size: 12px; }
+  .txn .c-del   { order: 6; margin-left: auto; }
+  .txn td.c-del .btn.sm { padding: 7px 12px; min-width: 42px; min-height: 30px; } /* 手机上加大触控区 */
+  .txn td.empty { width: 100%; }
+  .txn .p-main  { max-width: 100%; font-size: 14px; }
+  .txn .p-note  {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; margin-top: 3px;
+    font-size: 12px; line-height: 1.45; color: var(--text-dim);
+    word-break: break-all;
+  }
 }

@@ -109,18 +109,25 @@ async function render() {
   });
 
   // 表格（事件委托，不用内联 onclick，杜绝注入）
-  document.getElementById("tbody").innerHTML = rows.slice(0, 500).map(r => `
+  // c-* 类用于 ≤640px 的卡片式布局排序；备注 p-note 在移动端作为副行显示
+  document.getElementById("tbody").innerHTML = rows.slice(0, 500).map(r => {
+    const note = esc(r.description || "");
+    return `
     <tr>
-      <td class="muted" style="white-space:nowrap">${esc(fmtDateTime(r.occurred_at).slice(5, 16))}</td>
-      <td><span class="chip editable" data-act="editCat" data-id="${r.id}">
+      <td class="muted c-time" style="white-space:nowrap">${esc(fmtDateTime(r.occurred_at).slice(5, 16))}</td>
+      <td class="c-cat"><span class="chip editable" data-act="editCat" data-id="${r.id}">
         <span class="dot" style="background:${catColor(r.category)}"></span>${esc(r.category)}</span></td>
-      <td class="ellip">${esc(r.counterparty || "—")}</td>
-      <td class="ellip muted desc-col">${esc(r.description || "")}</td>
+      <td class="c-party">
+        <div class="p-main ellip">${esc(r.counterparty || "—")}</div>
+        ${note ? `<div class="p-note">${note}</div>` : ""}
+      </td>
+      <td class="ellip muted desc-col">${note}</td>
       <td class="muted src-col" style="white-space:nowrap">${esc(r.source)}</td>
-      <td class="num ${r.direction === 'income' ? 'amount-in' : (r.direction === 'expense' ? 'amount-out' : 'muted')}">
+      <td class="num ${r.direction === 'income' ? 'amount-in' : (r.direction === 'expense' ? 'amount-out' : 'muted')} c-amt">
         ${r.direction === "income" ? "+" : (r.direction === "expense" ? "-" : "")}${money(r.amount)}</td>
-      <td><button class="btn sm danger" data-act="delTx" data-id="${r.id}">删</button></td>
-    </tr>`).join("") || `<tr><td colspan="7" class="empty">没有符合条件的记录</td></tr>`;
+      <td class="c-del"><button class="btn sm danger" data-act="delTx" data-id="${r.id}">删</button></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" class="empty">没有符合条件的记录</td></tr>`;
 
   document.getElementById("moreHint").textContent =
     rows.length > 500 ? `仅显示前 500 条，可用筛选条件缩小范围（共 ${rows.length} 条）` : `共 ${rows.length} 条`;
