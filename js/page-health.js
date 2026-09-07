@@ -170,21 +170,35 @@ async function render() {
       style="background:${bg}"></div>`;
   }).join("");
 
-  // 表格（事件委托）
+  // 表格（事件委托）。h-* 类用于 ≤640px 卡片布局；h-x 摘要块（指标+备注）仅移动端显示
   const rows = S.filter(x => x.id).slice().reverse().slice(0, 60);
-  document.getElementById("hb").innerHTML = rows.length ? rows.map(r => `
+  document.getElementById("hb").innerHTML = rows.length ? rows.map(r => {
+    const mood = ["", "😞", "😕", "😐", "🙂", "😄"][r.mood] || "";
+    const chips = [
+      r.sleep_hours ? `😴 ${r.sleep_hours}h` : "",
+      r.sleep_score ? `⭐ ${r.sleep_score}` : "",
+      mood,
+      r.weight ? `${r.weight}kg` : "",
+      r.exercise_minutes ? `🏃 ${r.exercise_minutes}min` : "",
+      r.steps ? `👣 ${r.steps.toLocaleString()}` : "",
+      r.focus_hours ? `🧘 ${r.focus_hours}h` : "",
+    ].filter(Boolean).map(c => `<span>${c}</span>`).join("");
+    const note = esc(r.note || "");
+    return `
     <tr>
-      <td style="white-space:nowrap">${dayKey(r.day)}</td>
-      <td class="num">${r.sleep_hours || "—"}</td>
-      <td class="num">${r.sleep_score || "—"}</td>
-      <td class="num">${["", "😞", "😕", "😐", "🙂", "😄"][r.mood] || "—"}</td>
-      <td class="num">${r.weight || "—"}</td>
-      <td class="num">${r.exercise_minutes || "—"}</td>
-      <td class="num">${r.steps ? r.steps.toLocaleString() : "—"}</td>
-      <td class="num">${r.focus_hours || "—"}</td>
-      <td class="ellip muted">${esc(r.note || "")}</td>
-      <td><button class="btn sm danger" data-act="del" data-day="${dayKey(r.day)}">删</button></td>
-    </tr>`).join("") : `<tr><td colspan="10" class="empty">还没有记录</td></tr>`;
+      <td class="muted h-day" style="white-space:nowrap">${dayKey(r.day)}</td>
+      <td class="num h-num">${r.sleep_hours || "—"}</td>
+      <td class="num h-num">${r.sleep_score || "—"}</td>
+      <td class="num h-num">${mood || "—"}</td>
+      <td class="num h-num">${r.weight || "—"}</td>
+      <td class="num h-num">${r.exercise_minutes || "—"}</td>
+      <td class="num h-num">${r.steps ? r.steps.toLocaleString() : "—"}</td>
+      <td class="num h-num">${r.focus_hours || "—"}</td>
+      <td class="ellip muted h-note">${note}</td>
+      <td class="h-x">${chips ? `<div class="h-chips">${chips}</div>` : ""}${note ? `<div class="h-note-m">${note}</div>` : ""}</td>
+      <td class="h-del"><button class="btn sm danger" data-act="del" data-day="${dayKey(r.day)}">删</button></td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="11" class="empty">还没有记录</td></tr>`;
   document.getElementById("listTag").textContent = `显示最近 ${rows.length} 条`;
 }
 

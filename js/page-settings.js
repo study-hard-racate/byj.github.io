@@ -22,6 +22,20 @@ async function load() {
   refreshNotifyUI();
   refreshReminderStatus(reminder);
 
+  // 备份状态（导出/导入备份时会更新 lastBackupAt）
+  const bs = document.getElementById("backupStatus");
+  if (bs) {
+    const last = await DB.getSetting("lastBackupAt", null);
+    if (last) {
+      const days = Math.floor((Date.now() - last) / 86400000);
+      const ago = days <= 0 ? "今天" : days === 1 ? "昨天" : `${days} 天前`;
+      bs.innerHTML = `上次备份：${esc(fmtDateTime(new Date(last)))}（${ago}）` +
+        (days >= 14 ? `<span style="color:var(--orange)">，已超过两周，建议再导出一份</span>` : "");
+    } else {
+      bs.textContent = "⚠️ 还没导出过备份：数据只存在本浏览器，清浏览器数据会全部丢失，建议先导出一份 JSON。";
+    }
+  }
+
   document.getElementById("ver").textContent = APP_CONFIG.version;
 
   // iOS 显示 Safari 手动添加指引
@@ -131,7 +145,9 @@ async function saveReminder() {
 async function exportData() {
   const data = await DB.exportAll();
   download(`byj-backup-${todayStr()}.json`, JSON.stringify(data, null, 2), "application/json");
+  await DB.setSetting("lastBackupAt", Date.now()); // 只写本地 settings，备份 JSON 结构不变
   toast("备份已导出", "ok");
+  load();
 }
 
 document.getElementById("importFile").addEventListener("change", async (e) => {
@@ -142,6 +158,7 @@ document.getElementById("importFile").addEventListener("change", async (e) => {
     const data = JSON.parse(text);
     if (!confirm("导入备份会【覆盖】当前所有数据，确定继续？")) { e.target.value = ""; return; }
     await DB.importAll(data);
+    await DB.setSetting("lastBackupAt", Date.now()); // 刚用过备份文件，视为已有备份
     toast("备份已恢复", "ok");
     load();
   } catch (err) {

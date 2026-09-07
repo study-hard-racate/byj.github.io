@@ -186,6 +186,7 @@ tbody tr:last-child td { border-bottom: none; }
 .ellip { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-main { min-width: 0; }
 .p-note { display: none; } /* 桌面端备注走独立列；移动端（≤640px）作为副行显示 */
+.htx .h-x { display: none; } /* 桌面端健康记录走完整表格列；移动端显示指标摘要+备注 */
 
 /* 分类徽章 */
 .chip {
@@ -370,6 +371,35 @@ tbody tr:last-child td { border-bottom: none; }
   .txn .p-note  {
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
     overflow: hidden; margin-top: 3px;
+    font-size: 12px; line-height: 1.45; color: var(--text-dim);
+    word-break: break-all;
+  }
+}
+
+/* 移动端健康记录卡片化：日期+删一行，指标摘要一行，备注副行 */
+@media (max-width: 640px) {
+  .htx thead { display: none; }
+  .htx tbody tr {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 6px 10px; padding: 11px 12px; margin-bottom: 9px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 11px;
+  }
+  .htx tbody tr:last-child { margin-bottom: 0; }
+  .htx td { display: block; padding: 0; border-bottom: none; }
+  .htx .h-day { order: 1; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .htx .h-del { order: 2; margin-left: auto; }
+  .htx td.h-del .btn.sm { padding: 7px 12px; min-width: 42px; min-height: 30px; }
+  .htx .h-x   { order: 3; display: block; width: 100%; min-width: 0; }
+  .htx .h-num, .htx .h-note { display: none; }
+  .htx td.empty { width: 100%; }
+  .htx .h-chips {
+    display: flex; flex-wrap: wrap; gap: 4px 12px;
+    font-size: 12.5px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+  }
+  .htx .h-note-m {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; margin-top: 4px;
     font-size: 12px; line-height: 1.45; color: var(--text-dim);
     word-break: break-all;
   }

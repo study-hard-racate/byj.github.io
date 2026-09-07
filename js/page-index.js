@@ -57,6 +57,21 @@ async function refreshBanners() {
     tryNotify(`${nowMonth} 还没有账单记录，记得导入`, "bill");
   }
 
+  // 备份提醒：有真实数据且从未备份 / 超过 14 天未备份（演示数据不打扰）
+  if (!isDemo) {
+    const [txAll, hrAll] = await Promise.all([DB.getAll("transactions"), DB.getAll("health_records")]);
+    if (txAll.length || hrAll.length) {
+      const last = await DB.getSetting("lastBackupAt", null);
+      const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+      if (last === null || days >= 14) {
+        html.push(`<div class="banner">
+          <div class="banner-body">💾 数据只存在本浏览器，${last === null ? "还没导出过备份" : `距上次备份已 ${days} 天`}，建议导出一份 JSON。</div>
+          <a class="btn sm" href="settings.html">去备份</a>
+        </div>`);
+      }
+    }
+  }
+
   // 超支提醒
   const sum = await DB.summaryForMonth(nowMonth);
   if (sum.budget && sum.expense > sum.budget) {
