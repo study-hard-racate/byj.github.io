@@ -108,11 +108,26 @@ async function render() {
     height: 250, tipLabel: (lb, i) => trend.months[i] || lb
   });
 
-  // 表格（事件委托，不用内联 onclick，杜绝注入）
-  // c-* 类用于 ≤640px 的卡片式布局排序；备注 p-note 在移动端作为副行显示
-  document.getElementById("tbody").innerHTML = rows.slice(0, 500).map(r => {
-    const note = esc(r.description || "");
-    return `
+  // 表格（事件委托，不用内联 onclick，杜绝注入）—— 分批渲染 + 加载更多
+  drawTable(rows);
+
+  // 月度导入提醒
+  const b = document.getElementById("banners");
+  const hasThisMonth = await DB.getSetting("monthSeen:" + nowMonth, false)
+    || sum.expense_count > 0 || sum.income > 0;
+  b.innerHTML = (!hasThisMonth && (await DB.getAll("transactions")).length > 0) ? `
+    <div class="banner">
+      <div class="banner-body">📥 ${nowMonth} 还没有账单记录，记得导入或记一笔。</div>
+      <a class="btn sm primary" href="import.html">去导入</a>
+    </div>` : "";
+}
+
+/* ---------- 明细分批渲染 + 加载更多 ---------- */
+let txnLimit = 60;
+
+function txnRowHtml(r) {
+  const note = esc(r.description || "");
+  return `
     <tr>
       <td class="muted c-time" style="white-space:nowrap">${esc(fmtDateTime(r.occurred_at).slice(5, 16))}</td>
       <td class="c-cat"><span class="chip editable" data-act="editCat" data-id="${r.id}">
@@ -127,21 +142,22 @@ async function render() {
         ${r.direction === "income" ? "+" : (r.direction === "expense" ? "-" : "")}${money(r.amount)}</td>
       <td class="c-del"><button class="btn sm danger" data-act="delTx" data-id="${r.id}">删</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="7" class="empty">没有符合条件的记录</td></tr>`;
-
-  document.getElementById("moreHint").textContent =
-    rows.length > 500 ? `仅显示前 500 条，可用筛选条件缩小范围（共 ${rows.length} 条）` : `共 ${rows.length} 条`;
-
-  // 月度导入提醒
-  const b = document.getElementById("banners");
-  const hasThisMonth = await DB.getSetting("monthSeen:" + nowMonth, false)
-    || sum.expense_count > 0 || sum.income > 0;
-  b.innerHTML = (!hasThisMonth && (await DB.getAll("transactions")).length > 0) ? `
-    <div class="banner">
-      <div class="banner-body">📥 ${nowMonth} 还没有账单记录，记得导入或记一笔。</div>
-      <a class="btn sm primary" href="import.html">去导入</a>
-    </div>` : "";
 }
+
+function drawTable(rows) {
+  document.getElementById("tbody").innerHTML = rows.slice(0, txnLimit).map(txnRowHtml).join("") ||
+    `<tr><td colspan="7" class="empty">没有符合条件的记录</td></tr>`;
+  const btn = document.getElementById("loadMoreBtn");
+  if (btn) btn.style.display = rows.length > txnLimit ? "" : "none";
+  document.getElementById("moreHint").textContent = rows.length > txnLimit
+    ? `已显示 ${txnLimit} / ${rows.length} 条，可继续加载`
+    : `共 ${rows.length} 条`;
+}
+
+document.getElementById("loadMoreBtn").addEventListener("click", () => {
+  txnLimit += 60;
+  drawTable(CURRENT_ROWS);
+});
 
 /* ---------- 事件委托 ---------- */
 document.getElementById("tbody").addEventListener("click", async (e) => {
@@ -237,7 +253,7 @@ function openAdd() {
     <h3>记一笔</h3>
     <div class="checkin-grid">
       <label class="field">金额
-        <input type="number" id="aAmount" step="0.01" placeholder="0.00" autofocus>
+        <input type="number" id="aAmount" step="0.01" inputmode="decimal" placeholder="0.00" autofocus>
       </label>
       <label class="field">类型
         <select id="aDir">
@@ -296,13 +312,14 @@ function resetFilter() {
   els.month.value = nowMonth;
   els.cat.value = "all"; els.src.value = "all";
   els.dir.value = "expense"; els.kw.value = "";
+  txnLimit = 60;
   render();
 }
 
-["month", "cat", "src", "dir"].forEach(k => els[k].addEventListener("change", render));
+["month", "cat", "src", "dir"].forEach(k => els[k].addEventListener("change", () => { txnLimit = 60; render(); }));
 let kwTimer;
 els.kw.addEventListener("input", () => {
-  clearTimeout(kwTimer); kwTimer = setTimeout(render, 300);
+  clearTimeout(kwTimer); kwTimer = setTimeout(() => { txnLimit = 60; render(); }, 300);
 });
 window.addEventListener("themechange", () => setTimeout(render, 30));
 

@@ -91,7 +91,21 @@ async function renderLayout() {
     const dark = document.documentElement.dataset.theme === "dark";
     iconM.textContent = dark ? "🌙" : "☀️";
   }
+  applyThemeColor();
 }
+
+// 浏览器状态栏/工具栏颜色跟随主题
+function applyThemeColor() {
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.appendChild(meta);
+  }
+  const dark = document.documentElement.dataset.theme === "dark";
+  meta.content = dark ? "#0e1016" : "#f4f6fa";
+}
+window.addEventListener("themechange", applyThemeColor);
 
 // PWA：注册 Service Worker（离线缓存）
 if ("serviceWorker" in navigator) {

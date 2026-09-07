@@ -42,7 +42,8 @@ npx serve .
 
 - 单元测试：`node tools/run-tests.js`（解析器 / Excel / 健壮性共 44 项，见 `tools/`）
 - 浏览器端到端与线上验证清单：见 [`tools/TESTING.md`](tools/TESTING.md)
-- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v5），否则用户会被旧缓存困住
+- 移动端回归审计：跑 `tools/mobile-audit.js`（0 溢出 / 触控≥40px / iOS 输入不缩放 / 导航字号）
+- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v6），否则用户会被旧缓存困住
 
 ## 部署到 GitHub Pages
 

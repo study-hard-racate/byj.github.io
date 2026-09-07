@@ -170,21 +170,26 @@ async function render() {
       style="background:${bg}"></div>`;
   }).join("");
 
-  // 表格（事件委托）。h-* 类用于 ≤640px 卡片布局；h-x 摘要块（指标+备注）仅移动端显示
-  const rows = S.filter(x => x.id).slice().reverse().slice(0, 60);
-  document.getElementById("hb").innerHTML = rows.length ? rows.map(r => {
-    const mood = ["", "😞", "😕", "😐", "🙂", "😄"][r.mood] || "";
-    const chips = [
-      r.sleep_hours ? `😴 ${r.sleep_hours}h` : "",
-      r.sleep_score ? `⭐ ${r.sleep_score}` : "",
-      mood,
-      r.weight ? `${r.weight}kg` : "",
-      r.exercise_minutes ? `🏃 ${r.exercise_minutes}min` : "",
-      r.steps ? `👣 ${r.steps.toLocaleString()}` : "",
-      r.focus_hours ? `🧘 ${r.focus_hours}h` : "",
-    ].filter(Boolean).map(c => `<span>${c}</span>`).join("");
-    const note = esc(r.note || "");
-    return `
+  // 记录列表（事件委托）。h-* 类用于 ≤640px 卡片布局 —— 分批渲染 + 加载更多
+  drawHealthRows(S.filter(x => x.id).slice().reverse());
+}
+
+/* ---------- 记录列表分批渲染 + 加载更多 ---------- */
+let healthLimit = 60;
+
+function healthRowHtml(r) {
+  const mood = ["", "😞", "😕", "😐", "🙂", "😄"][r.mood] || "";
+  const chips = [
+    r.sleep_hours ? `😴 ${r.sleep_hours}h` : "",
+    r.sleep_score ? `⭐ ${r.sleep_score}` : "",
+    mood,
+    r.weight ? `${r.weight}kg` : "",
+    r.exercise_minutes ? `🏃 ${r.exercise_minutes}min` : "",
+    r.steps ? `👣 ${r.steps.toLocaleString()}` : "",
+    r.focus_hours ? `🧘 ${r.focus_hours}h` : "",
+  ].filter(Boolean).map(c => `<span>${c}</span>`).join("");
+  const note = esc(r.note || "");
+  return `
     <tr>
       <td class="muted h-day" style="white-space:nowrap">${dayKey(r.day)}</td>
       <td class="num h-num">${r.sleep_hours || "—"}</td>
@@ -198,16 +203,30 @@ async function render() {
       <td class="h-x">${chips ? `<div class="h-chips">${chips}</div>` : ""}${note ? `<div class="h-note-m">${note}</div>` : ""}</td>
       <td class="h-del"><button class="btn sm danger" data-act="del" data-day="${dayKey(r.day)}">删</button></td>
     </tr>`;
-  }).join("") : `<tr><td colspan="11" class="empty">还没有记录</td></tr>`;
-  document.getElementById("listTag").textContent = `显示最近 ${rows.length} 条`;
 }
+
+function drawHealthRows(rows) {
+  document.getElementById("hb").innerHTML = rows.slice(0, healthLimit).map(healthRowHtml).join("") ||
+    `<tr><td colspan="11" class="empty">还没有记录</td></tr>`;
+  const btn = document.getElementById("healthMoreBtn");
+  if (btn) btn.style.display = rows.length > healthLimit ? "" : "none";
+  document.getElementById("listTag").textContent = rows.length > healthLimit
+    ? `已显示 ${healthLimit} / ${rows.length} 条，可继续加载`
+    : `最近 ${rows.length} 条`;
+}
+
+document.getElementById("healthMoreBtn").addEventListener("click", () => {
+  healthLimit += 60;
+  const all = ALL.series.filter(x => x.id).slice().reverse();
+  drawHealthRows(all);
+});
 
 document.getElementById("hb").addEventListener("click", (e) => {
   const t = e.target.closest("[data-act=del]");
   if (t) delRecord(t.dataset.day);
 });
 
-document.getElementById("rangeSel").addEventListener("change", render);
+document.getElementById("rangeSel").addEventListener("change", () => { healthLimit = 60; render(); });
 document.getElementById("cDay").addEventListener("change", e => loadDay(e.target.value));
 window.addEventListener("themechange", () => setTimeout(render, 30));
 
