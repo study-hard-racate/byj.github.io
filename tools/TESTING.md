@@ -45,6 +45,11 @@ node tools/unit-test-robust.js   # 健壮性 16 项
 
 通过标准：0 横向溢出 / 无控制台报错 / 核心触控 ≥40px / ≤640px 输入框字号 ≥16px（iOS 不缩放）/ 最小可见字号 ≥11px。不达标会在结果里列出 violations。
 
+**⚠️ HTTP 缓存陷阱（踩过）**：GitHub Pages 给 css/js 带缓存头，tabbit 浏览器即使清掉 Service Worker 缓存，HTTP 层仍可能给出旧文件 → 审计结果"没变化"其实是旧 css。对策：
+1. 首选**对本地服务器审计**（python http.server 无缓存头，结果可信）。
+2. 或线上审计前先确认部署：`Invoke-WebRequest -Headers @{"Cache-Control"="no-cache"}` 拉 css/js 与 `git cat-file blob HEAD:<f>` 做 SHA256 字节比对，一致后再审计。
+3. 对真实用户：发版必须 bump `sw.js` 的 CACHE（新 SW 会重取资源）；GitHub Pages 静态资源 HTTP 缓存约 10 分钟内自然过期，用户硬刷新一次最快。
+
 ## 线上验证清单（改完推送后）
 
 1. `git fetch && git status` 确认已同步。
