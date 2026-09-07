@@ -38,10 +38,77 @@ async function load() {
 
   document.getElementById("ver").textContent = APP_CONFIG.version;
 
+  // 自定义 LOGO 图片预览
+  const brandLogo = await DB.getSetting("brandLogo", null);
+  refreshLogoUI(brandLogo);
+
   // iOS 显示 Safari 手动添加指引
   const iosHint = document.getElementById("iosHint");
   if (iosHint && window.isIOSPWA) iosHint.style.display = "";
 }
+
+/* ---------- 自定义 LOGO 图片（只存浏览器本地） ---------- */
+function refreshLogoUI(logo) {
+  const preview = document.getElementById("logoPreview");
+  const removeBtn = document.getElementById("logoRemoveBtn");
+  if (!preview) return;
+  if (logo && logo.dataUrl) {
+    preview.src = logo.dataUrl;
+    preview.style.display = "";
+    removeBtn.style.display = "";
+  } else {
+    preview.style.display = "none";
+    preview.removeAttribute("src");
+    removeBtn.style.display = "none";
+  }
+}
+
+async function uploadLogo(file) {
+  const dataUrl = await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(new Error("读取图片失败"));
+    fr.readAsDataURL(file);
+  });
+  const img = new Image();
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("图片无法解析，请换一张"));
+    img.src = dataUrl;
+  });
+  // 居中裁剪成正方形并压到 128px，控制存储体积
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const s = Math.min(img.width, img.height);
+  ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+  const out = canvas.toDataURL("image/png");
+  await DB.setSetting("brandLogo", { dataUrl: out, updatedAt: Date.now() });
+  refreshLogoUI({ dataUrl: out });
+  toast("LOGO 已更新", "ok");
+  await renderLayout();
+}
+
+async function removeLogo() {
+  await DB.setSetting("brandLogo", null);
+  refreshLogoUI(null);
+  toast("已恢复字母 LOGO", "ok");
+  await renderLayout();
+}
+
+document.getElementById("logoFile").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) {
+    try {
+      await uploadLogo(f);
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  }
+  e.target.value = "";
+});
 
 /* ---------- 通知权限 ---------- */
 function refreshNotifyUI() {

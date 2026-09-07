@@ -14,8 +14,14 @@ const NAV = [
 async function renderLayout() {
   const page = document.body.dataset.page || "";
   const brand = await DB.getSetting("brand", null) || APP_CONFIG.brand;
+  const brandLogo = await DB.getSetting("brandLogo", null);
 
   document.title = brand.name + (page ? " · " + NAV.find(n => n.key === page)?.label : "");
+
+  // LOGO 内容：有自定义图片用图片，否则用字母
+  const markHtml = brandLogo && brandLogo.dataUrl
+    ? `<img class="brand-img" src="${esc(brandLogo.dataUrl)}" alt="">`
+    : esc(brand.logo || "B");
 
   const navLinks = NAV.map(n => `
     <a href="${n.href}" class="nav-item ${n.key === page ? "active" : ""}">
@@ -30,7 +36,7 @@ async function renderLayout() {
   if (sidebar) {
     sidebar.innerHTML = `
       <div class="brand">
-        <div class="brand-mark">${esc(brand.logo || "B")}</div>
+        <div class="brand-mark">${markHtml}</div>
         <div class="brand-text">
           <strong>${esc(brand.name)}</strong>
           <span>${esc(brand.sub || "")}</span>
@@ -52,7 +58,7 @@ async function renderLayout() {
   const mobileTop = document.getElementById("mobileTop");
   if (mobileTop) {
     mobileTop.innerHTML = `
-      <div class="brand-mark">${esc(brand.logo || "B")}</div>
+      <div class="brand-mark">${markHtml}</div>
       <div class="brand-text"><strong>${esc(brand.name)}</strong></div>
       <div class="spacer"></div>
       <button class="theme-toggle" onclick="toggleTheme()">

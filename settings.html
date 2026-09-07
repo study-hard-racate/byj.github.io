@@ -31,13 +31,22 @@
         <label class="field">副标题
           <input type="text" id="setSub" placeholder="Finance & Health">
         </label>
-        <label class="field">LOGO 文字
+        <label class="field">字母 LOGO（未上传图片时显示）
           <input type="text" id="setLogo" maxlength="2" placeholder="B">
         </label>
       </div>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn primary" onclick="saveBrand()">保存品牌</button>
         <span class="muted" style="font-size:12px">主题色在 <code>js/config.js</code> 的 accent 里改</span>
+      </div>
+      <div class="btn-row" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;align-items:center">
+        <img id="logoPreview" alt="LOGO 预览" style="display:none;width:46px;height:46px;border-radius:11px;object-fit:cover;border:1px solid var(--border);background:var(--bg-soft)">
+        <button class="btn" onclick="document.getElementById('logoFile').click()">📷 上传 LOGO 图片</button>
+        <button class="btn" id="logoRemoveBtn" onclick="removeLogo()" style="display:none">移除自定义图片</button>
+        <input type="file" id="logoFile" accept="image/*" style="display:none">
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">
+        图片会自动裁剪成正方形并压缩（只存本浏览器，不联网上传）；手机顶栏 / 电脑侧边栏即时生效。
       </div>
     </div>
 
@@ -92,6 +101,8 @@
         • Android：Chrome 打开本站会弹出「安装应用」提示；没弹的话点右上角 ⋮ →「安装应用」，
           或等本站出现「一键安装」按钮（首次访问后触发）。<br>
         • 装好后桌面会出现 <b>B</b> 字图标，点开即全屏运行，断网也能用。<br>
+        • 桌面图标是全站统一的（安装后即固定）：想换成自己的图片，把它发给我即可替换
+          （替换后需删除图标重新安装一次才会生效）。<br>
         • ⚠️ 每个设备的数据是独立的：换设备后请在「数据管理」里导出备份 → 新设备导入。
       </div>
     </div>
