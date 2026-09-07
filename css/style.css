@@ -365,7 +365,7 @@ tbody tr:last-child td { border-bottom: none; }
   .txn .c-cat   { order: 4; }
   .txn .src-col { order: 5; display: block; font-size: 12px; }
   .txn .c-del   { order: 6; margin-left: auto; }
-  .txn td.c-del .btn.sm { padding: 7px 12px; min-width: 42px; min-height: 30px; } /* 手机上加大触控区 */
+  .txn td.c-del .btn.sm { padding: 9px 14px; min-width: 44px; min-height: 40px; } /* 手机上加大触控区 */
   .txn td.empty { width: 100%; }
   .txn .p-main  { max-width: 100%; font-size: 14px; }
   .txn .p-note  {
@@ -389,7 +389,7 @@ tbody tr:last-child td { border-bottom: none; }
   .htx td { display: block; padding: 0; border-bottom: none; }
   .htx .h-day { order: 1; font-size: 12px; font-variant-numeric: tabular-nums; }
   .htx .h-del { order: 2; margin-left: auto; }
-  .htx td.h-del .btn.sm { padding: 7px 12px; min-width: 42px; min-height: 30px; }
+  .htx td.h-del .btn.sm { padding: 9px 14px; min-width: 44px; min-height: 40px; }
   .htx .h-x   { order: 3; display: block; width: 100%; min-width: 0; }
   .htx .h-num, .htx .h-note { display: none; }
   .htx td.empty { width: 100%; }
@@ -419,8 +419,9 @@ tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 820px) {
   .btn { min-height: 44px; }
   .btn.sm { min-height: 40px; padding: 6px 12px; }
-  .theme-toggle { min-height: 44px; }
-  .chip.editable { padding: 7px 11px; }
+  .theme-toggle { min-height: 44px; min-width: 44px; }
+  .mobile-top .theme-toggle { min-width: 44px; justify-content: center; padding: 8px 10px; }
+  .chip.editable { padding: 7px 11px; min-height: 40px; box-sizing: border-box; }
   .stars .star { padding: 10px 8px; margin: -6px -2px; }
   a.tag { display: inline-block; padding: 9px 6px; margin: -9px -6px; }
   .main .btn-row { row-gap: 10px; }
