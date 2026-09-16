@@ -52,7 +52,32 @@ async function loadFilters() {
     [...srcs].sort().map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
 }
 
+/* ---------- 筛选栏折叠（窄屏收成一行；用原生 details，禁用 JS 也照常可用）---------- */
+const filterPanel = document.getElementById("filterPanel");
+let filterNarrow = window.innerWidth <= 640;
+function syncFilterPanel() {
+  if (filterPanel) filterPanel.open = !filterNarrow;
+}
+/** 折叠状态下也要能一眼看出生效了什么筛选，否则等于把功能藏没了 */
+function filterSummaryText() {
+  const el = document.getElementById("filterSummary");
+  if (!el) return;
+  const dirName = { expense: "仅支出", income: "仅收入", transfer: "不计收支" };
+  const parts = [els.month.value === "all" ? "全部月份" : els.month.value];
+  if (els.cat.value !== "all") parts.push(els.cat.value);
+  if (els.src.value !== "all") parts.push(els.src.value);
+  if (els.dir.value !== "all") parts.push(dirName[els.dir.value] || els.dir.value);
+  const kw = els.kw.value.trim();
+  if (kw) parts.push("搜索:" + kw);
+  el.textContent = " · " + parts.join(" · ");
+}
+window.addEventListener("resize", () => {
+  const narrow = window.innerWidth <= 640;
+  if (narrow !== filterNarrow) { filterNarrow = narrow; syncFilterPanel(); }
+});
+
 async function render() {
+  filterSummaryText();
   const m = els.month.value === "all" ? nowMonth : els.month.value;
   const [sum, trend] = await Promise.all([
     DB.summaryForMonth(m),
@@ -122,7 +147,9 @@ async function render() {
 }
 
 /* ---------- 明细分批渲染 + 加载更多 ---------- */
-let txnLimit = 60;
+// 手机上首屏少画一些：一张卡片约 140px，60 条会把页面拉成 8000+px 的长条
+function pageSize() { return window.innerWidth <= 640 ? 20 : 60; }
+let txnLimit = pageSize();
 
 function txnRowHtml(r) {
   const note = esc(r.description || "");
@@ -154,7 +181,7 @@ function drawTable(rows) {
 }
 
 document.getElementById("loadMoreBtn").addEventListener("click", () => {
-  txnLimit += 60;
+  txnLimit += pageSize();
   drawTable(CURRENT_ROWS);
 });
 
@@ -312,14 +339,14 @@ function resetFilter() {
   els.month.value = nowMonth;
   els.cat.value = "all"; els.src.value = "all";
   els.dir.value = "expense"; els.kw.value = "";
-  txnLimit = 60;
+  txnLimit = pageSize();
   render();
 }
 
-["month", "cat", "src", "dir"].forEach(k => els[k].addEventListener("change", () => { txnLimit = 60; render(); }));
+["month", "cat", "src", "dir"].forEach(k => els[k].addEventListener("change", () => { txnLimit = pageSize(); render(); }));
 let kwTimer;
 els.kw.addEventListener("input", () => {
-  clearTimeout(kwTimer); kwTimer = setTimeout(() => { txnLimit = 60; render(); }, 300);
+  clearTimeout(kwTimer); kwTimer = setTimeout(() => { txnLimit = pageSize(); render(); }, 300);
 });
 window.addEventListener("themechange", () => setTimeout(render, 30));
 
@@ -328,6 +355,7 @@ window.addEventListener("themechange", () => setTimeout(render, 30));
     await seedDemoIfFirstRun();
     ALL_TXN = await DB.listTransactions();
     await loadFilters();
+    syncFilterPanel();
     await render();
   } catch (e) {
     console.error(e);

@@ -7,7 +7,7 @@
 - 📈 年度报告：一年花了多少、状态怎么样，一键生成
 - 💾 数据 100% 存在**你的浏览器本地**（IndexedDB），不联网、不上传
 - 📲 PWA：可安装到手机 / 电脑桌面，断网也能用
-- 📱 移动端优化：明细卡片化、底部导航、提醒与备份引导
+- 📱 移动端优化：明细卡片化、图表按屏宽自适应、筛选栏可折叠、底部导航、提醒与备份引导
 
 线上地址：<https://study-hard-racate.github.io/byj.github.io/>
 
@@ -44,7 +44,7 @@ npx serve .
 - CI：推送到 `main` 后 GitHub Actions 自动跑同一套回归（见 `.github/workflows/ci.yml`）
 - 浏览器端到端与线上验证清单：见 [`tools/TESTING.md`](tools/TESTING.md)
 - 移动端回归审计：跑 `tools/mobile-audit.js`（0 溢出 / 触控≥40px / iOS 输入不缩放 / 导航字号）
-- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v9），否则用户会被旧缓存困住
+- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v10），否则用户会被旧缓存困住
 
 ## 部署到 GitHub Pages
 

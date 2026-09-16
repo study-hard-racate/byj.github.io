@@ -483,3 +483,64 @@ a, button, .chip, .star, .nav-item, .bottom-nav a { -webkit-tap-highlight-color:
 /* 自定义 LOGO 图片（替代字母） */
 .brand-mark { overflow: hidden; }
 .brand-mark .brand-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+/* ============ 移动端体验优化（M4：图表自适应 + 表单/筛选/长列表）============ */
+
+/* 图表卡片：窄屏改一列铺满。
+   原来两列时每张图只有 ~140px 宽，720 宽的 viewBox 被压扁到 19%，坐标轴挤成一团 */
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* 打卡表单：窄屏固定两列（minmax(0,1fr) 防止子元素把列撑开），
+   星级这类宽控件整行铺满 —— 否则 5 颗星（每颗 45px）塞进 155px 的格子，
+   最后一颗会被 .main 的 overflow-x:hidden 直接裁掉 */
+@media (max-width: 640px) {
+  .checkin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+  .checkin-grid > .field.span-full { grid-column: 1 / -1; }
+}
+
+/* 财务页筛选栏：窄屏折叠成一行（原生 details），展开后两列铺满。
+   原来五个控件乱换行、下拉框只有 89px 宽，连「餐饮·咖啡」都显示不全 */
+.filters .filter-summary { display: none; }
+@media (max-width: 640px) {
+  .filters:not([open]) { padding: 12px 14px; }
+  .filters .filter-summary {
+    display: flex; align-items: center; gap: 6px; min-height: 40px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    cursor: pointer; list-style: none;
+  }
+  .filters .filter-summary::-webkit-details-marker { display: none; }
+  .filters .filter-summary::after {
+    content: "▾"; margin-left: auto; color: var(--text-faint);
+    font-size: 12px; transition: transform .18s;
+  }
+  .filters[open] .filter-summary::after { transform: rotate(180deg); }
+  .filters .filter-summary .tag {
+    font-weight: 400; font-size: 11px; color: var(--text-faint);
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .filters .filter-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px; align-items: end; margin-top: 12px;
+  }
+  .filters .filter-grid > label.field { min-width: 0; }
+  .filters .filter-grid select,
+  .filters .filter-grid input { width: 100%; min-width: 0; }
+  .filters .filter-grid > .filter-wide,
+  .filters .filter-grid > .btn-reset { grid-column: 1 / -1; }
+}
+
+/* 平板/桌面：筛选栏常显（与折叠状态无关），保持原来的一行流式排布 */
+@media (min-width: 641px) {
+  .filters .filter-grid {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .filters .filter-grid > .btn-reset { align-self: flex-end; }
+  .filters #fKw { min-width: 180px; }
+}
+
+/* 手机上已有右下角「记一笔」悬浮按钮，页头里重复的那个收起来，少占一行 */
+@media (max-width: 640px) {
+  .page-head .btn-add-inline { display: none; }
+}

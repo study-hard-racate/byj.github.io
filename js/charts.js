@@ -7,6 +7,48 @@
 
   const NS = "http://www.w3.org/2000/svg";
 
+  /* ---------- 自适应宽度 + 尺寸变化重绘 ----------
+     原来 viewBox 固定 720 宽，窄屏靠 preserveAspectRatio="none" 横向压扁：
+     文字变窄、圆点变椭圆、竖线比横线细。改成按容器实际宽度出图，
+     横竖比例都是 1:1，图形不再变形。 */
+  const registry = new Map(); // container -> 重绘函数
+  let resizeTimer = null;
+  function registerChart(container, draw) {
+    if (container) registry.set(container, draw);
+  }
+  function redrawAll() {
+    for (const [c, draw] of [...registry]) {
+      if (!c.isConnected) { registry.delete(c); continue; }
+      try { draw(); } catch (e) { /* 单个图失败不影响其它 */ }
+    }
+  }
+  function scheduleRedraw(delay) {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(redrawAll, delay);
+  }
+  window.addEventListener("resize", () => scheduleRedraw(180));
+  window.addEventListener("orientationchange", () => scheduleRedraw(260));
+
+  function fitWidth(container, fallback) {
+    const w = Math.round((container && container.clientWidth) || 0);
+    return w > 60 ? w : fallback;
+  }
+  /** 窄屏收窄左右留白，把空间还给绘图区 */
+  function padFor(W, base) {
+    const narrow = W < 420;
+    return Object.assign({ t: 16, r: narrow ? 10 : 16, b: 30, l: narrow ? 38 : 48 }, base || {});
+  }
+  /** 按绘图区宽度决定 X 轴最多显示几个标签，避免标签挤成一团。
+      调用方指定的上限也要再按宽度收一次（否则窄屏仍会排满 10 个标签互相压字）。 */
+  function maxLabelsFor(iw, want) {
+    const byWidth = Math.max(2, Math.min(12, Math.floor(iw / 46)));
+    return want ? Math.min(want, byWidth) : byWidth;
+  }
+  /** 粗估文本像素宽（全角按 2 个半角算），用来判断相邻标签会不会叠字 */
+  function estTextWidth(t) {
+    return String(t === null || t === undefined ? "" : t).replace(/[^\x00-\xff]/g, "xx").length * 6.4;
+  }
+
   function el(tag, attrs, parent) {
     const node = document.createElementNS(NS, tag);
     for (const k in (attrs || {})) {
@@ -67,7 +109,9 @@
         W = w; H = h;
         line.setAttribute("x1", x); line.setAttribute("x2", x);
         line.setAttribute("y1", 0); line.setAttribute("y2", h);
-        const padX = 8, bw = Math.max(text.length * 6.6 + padX * 2, 46);
+        const padX = 8;
+        // 按最宽字符估算（中文≈1em），并夹在画布内，避免提示框超出 SVG
+        const bw = Math.min(Math.max(text.length * 7.6 + padX * 2, 46), Math.max(46, w - 6));
         let bx = x + 10;
         if (bx + bw > w) bx = x - bw - 10;
         if (bx < 0) bx = 2;
@@ -87,8 +131,8 @@
     container.innerHTML = "";
     const labels = opt.labels || [];
     const series = (opt.series || []).filter(s => s && !s.hidden);
-    const W = opt.width || 720, H = opt.height || 260;
-    const pad = Object.assign({ t: 16, r: 16, b: 30, l: 48 }, opt.pad || {});
+    const W = opt.width || fitWidth(container, 720), H = opt.height || 260;
+    const pad = padFor(W, opt.pad);
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
 
     const svg = el("svg", {
@@ -119,7 +163,7 @@
       if (yMin0 !== null && vmin > yMin0) vmin = yMin0;
     }
     if (opt.yMax !== undefined) vmax = Math.max(vmax, opt.yMax);
-    const sc = niceScale(vmin, vmax, opt.ticks || 4);
+    const sc = niceScale(vmin, vmax, opt.ticks || (W < 420 ? 3 : 4));
     vmin = sc.min; vmax = sc.max;
 
     const n = labels.length;
@@ -135,12 +179,16 @@
         .textContent = opt.yFormat ? opt.yFormat(v) : fmtNum(v, 0);
     });
 
-    // X 轴标签（自动稀释）
-    const every = Math.max(1, Math.ceil(n / (opt.maxXLabels || 12)));
+    // X 轴标签（按可用宽度自动稀释；再按估算宽度跳过会叠字的，尤其是硬塞的最后一个）
+    const every = Math.max(1, Math.ceil(n / maxLabelsFor(iw, opt.maxXLabels)));
+    let lastRight = -Infinity;
     labels.forEach((lb, i) => {
       if (i % every !== 0 && i !== n - 1) return;
-      el("text", { class: "lbl-x", x: X(i), y: H - pad.b + 16 }, svg)
-        .textContent = opt.xFormat ? opt.xFormat(lb, i) : lb;
+      const text = opt.xFormat ? opt.xFormat(lb, i) : lb;
+      const x = X(i), half = estTextWidth(text) / 2;
+      if (x - half < lastRight + 3) return;
+      lastRight = x + half;
+      el("text", { class: "lbl-x", x, y: H - pad.b + 16 }, svg).textContent = text;
     });
 
     // 线 + 面积（面积按连续段分别闭合，避免跨断点连线）
@@ -187,7 +235,7 @@
           "stroke-dasharray": s.dashed ? "5 4" : null
         }, svg);
       }
-      if (opt.showDots !== false && n <= 40) {
+      if (opt.showDots !== false && n <= 40 && iw / Math.max(n, 1) >= 12) {
         data.forEach((v, i) => {
           const isGap = v === null || v === undefined || (opt.treatZeroAsGap && Number(v) === 0);
           if (isGap) return;
@@ -220,6 +268,7 @@
       tip.show(X(i), Y(first ? first.v : (vmin + vmax) / 2), `${label}  ${body}`, W, H);
     });
     overlay.addEventListener("mouseleave", () => tip.hide());
+    registerChart(container, () => LineChart(container, opt));
     return svg;
   }
 
@@ -228,8 +277,8 @@
     container.innerHTML = "";
     const labels = opt.labels || [];
     const series = (opt.series || []).filter(s => s && !s.hidden);
-    const W = opt.width || 720, H = opt.height || 260;
-    const pad = Object.assign({ t: 16, r: 16, b: 30, l: 48 }, opt.pad || {});
+    const W = opt.width || fitWidth(container, 720), H = opt.height || 260;
+    const pad = padFor(W, opt.pad);
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
 
     const svg = el("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`,
@@ -246,7 +295,7 @@
       if (s.type === "line") return;
       (s.data || []).forEach(v => { vmax = Math.max(vmax, Number(v) || 0); });
     });
-    const sc = niceScale(0, vmax || 1, opt.ticks || 4);
+    const sc = niceScale(0, vmax || 1, opt.ticks || (W < 420 ? 3 : 4));
     vmax = sc.max;
     const Y = v => pad.t + ih - (v / (vmax || 1)) * ih;
 
@@ -277,6 +326,8 @@
     const startX = pad.l + (slot - groupW) / 2;
 
     const tip = Tip(svg);
+    const barEvery = Math.max(1, Math.ceil(n / maxLabelsFor(iw, opt.maxXLabels)));
+    let barLastRight = -Infinity;
     labels.forEach((lb, i) => {
       barSeries.forEach((s, si) => {
         const v = Number((s.data || [])[i] || 0);
@@ -296,9 +347,11 @@
         });
         rect.addEventListener("mouseleave", () => tip.hide());
       });
-      if (i % Math.max(1, Math.ceil(n / (opt.maxXLabels || 12))) === 0 || i === n - 1) {
-        el("text", { class: "lbl-x", x: startX + i * slot + groupW / 2, y: H - pad.b + 16 }, svg)
-          .textContent = lb;
+      const lx = startX + i * slot + groupW / 2;
+      const half = estTextWidth(lb) / 2;
+      if ((i % barEvery === 0 || i === n - 1) && lx - half >= barLastRight + 3) {
+        barLastRight = lx + half;
+        el("text", { class: "lbl-x", x: lx, y: H - pad.b + 16 }, svg).textContent = lb;
       }
     });
 
@@ -326,6 +379,7 @@
         });
       }
     });
+    registerChart(container, () => BarChart(container, opt));
     return svg;
   }
 

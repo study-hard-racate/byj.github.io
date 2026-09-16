@@ -48,14 +48,16 @@ node tools/unit-test-db.js       # 数据层 16 项
 
 通过标准：0 横向溢出 / 无控制台报错 / 核心触控 ≥40px / ≤640px 输入框字号 ≥16px（iOS 不缩放）/ 最小可见字号 ≥11px。不达标会在结果里列出 violations。
 
-**⚠️ HTTP 缓存陷阱（踩过）**：GitHub Pages 给 css/js 带缓存头，tabbit 浏览器即使清掉 Service Worker 缓存，HTTP 层仍可能给出旧文件 → 审计结果"没变化"其实是旧 css。对策：
-1. 首选**对本地服务器审计**（python http.server 无缓存头，结果可信）。
-2. 或线上审计前先确认部署：`Invoke-WebRequest -Headers @{"Cache-Control"="no-cache"}` 拉 css/js 与 `git cat-file blob HEAD:<f>` 做 SHA256 字节比对，一致后再审计。
-3. 对真实用户：发版必须 bump `sw.js` 的 CACHE（新 SW 会重取资源）；GitHub Pages 静态资源 HTTP 缓存约 10 分钟内自然过期，用户硬刷新一次最快。
+**⚠️ HTTP 缓存陷阱（反复踩过，务必照做）**：即使清掉 Service Worker 缓存，HTTP 层仍可能把旧 css/js 端上来 → 审计看到的是旧文件。实测结论：
+1. **`python -m http.server` 不足以避开这个坑**（旧文档写"无缓存头所以结果可信"，是错的）：它不带 `Cache-Control`，浏览器改用启发式新鲜度缓存，旧条目在新鲜期内**根本不会去问服务器**，所以后加 `no-store` 也救不回来（服务器压根没被访问）。稳妥做法：用带 `no-store` 的本地服务器，**并换一个新端口**（新 origin = 空 HTTP 缓存 + 空 SW + 空 IndexedDB），或在审计前清掉浏览器 HTTP 缓存。
+2. `?bust=...` 只能绕过 HTML，**绕不过 css/js 子资源** —— 别以为加了时间戳就拿到新代码。
+3. 无论怎么清，**审计脚本里都要有"新代码真的生效了"的断言**（如 `typeof pageSize === "function"`、扫 `document.styleSheets` 是否含新规则、或直接断言新行为）。否则会把旧文件的失败当成真失败、把旧文件的通过当成真通过。
+4. 线上审计前先确认部署：`Invoke-WebRequest -Headers @{"Cache-Control"="no-cache"}` 拉 css/js 与 `git cat-file blob HEAD:<f>` 做 SHA256 字节比对，一致后再审计。
+5. 对真实用户：发版必须 bump `sw.js` 的 CACHE（新 SW 会重取资源）；GitHub Pages 静态资源 HTTP 缓存约 10 分钟内自然过期，用户硬刷新一次最快。
 
 ## 线上验证清单（改完推送后）
 
 1. `git fetch && git status` 确认已同步。
 2. 推送后等 1~2 分钟 Pages 自动部署。
 3. 线上对比（字节级，注意 PowerShell 文本对比会被编码骗）：`git cat-file blob HEAD:<f>` 落盘 vs `Invoke-WebRequest -OutFile`，`Get-FileHash` 比对。
-4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v9）。
+4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v10）。

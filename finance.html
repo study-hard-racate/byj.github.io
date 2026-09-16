@@ -20,7 +20,7 @@
         <div class="sub">导入 → 自动分类 → 看清钱去哪了</div>
       </div>
       <div class="btn-row">
-        <button class="btn primary" onclick="openAdd()">＋ 记一笔</button>
+        <button class="btn primary btn-add-inline" onclick="openAdd()">＋ 记一笔</button>
         <button class="btn" onclick="reclassify()">🔄 重跑分类</button>
         <button class="btn" onclick="exportCsv()">⬇ 导出 CSV</button>
         <a class="btn" href="import.html">📥 导入</a>
@@ -29,9 +29,10 @@
 
     <div id="banners"></div>
 
-    <!-- 筛选栏 -->
-    <div class="card" style="margin-bottom:16px">
-      <div class="btn-row">
+    <!-- 筛选栏（窄屏可折叠成一行：原生 details，禁用 JS 也照常可用） -->
+    <details class="card filters" id="filterPanel" open style="margin-bottom:16px">
+      <summary class="filter-summary">筛选<span class="tag" id="filterSummary"></span></summary>
+      <div class="filter-grid">
         <label class="field">月份
           <select id="fMonth"><option value="all">全部</option></select>
         </label>
@@ -49,12 +50,12 @@
             <option value="transfer">不计收支</option>
           </select>
         </label>
-        <label class="field">搜索
-          <input type="search" id="fKw" placeholder="商户 / 备注 / 分类" style="min-width:180px">
+        <label class="field filter-wide">搜索
+          <input type="search" id="fKw" placeholder="商户 / 备注 / 分类">
         </label>
-        <button class="btn" onclick="resetFilter()" style="align-self:flex-end">重置</button>
+        <button class="btn btn-reset" onclick="resetFilter()">重置</button>
       </div>
-    </div>
+    </details>
 
     <div id="emptyHint" style="display:none">
       <div class="card">

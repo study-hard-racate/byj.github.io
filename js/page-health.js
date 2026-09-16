@@ -175,7 +175,9 @@ async function render() {
 }
 
 /* ---------- 记录列表分批渲染 + 加载更多 ---------- */
-let healthLimit = 60;
+// 手机上首屏少画一些，60 条卡片会把页面拉得很长
+function pageSize() { return window.innerWidth <= 640 ? 20 : 60; }
+let healthLimit = pageSize();
 
 function healthRowHtml(r) {
   const mood = ["", "😞", "😕", "😐", "🙂", "😄"][r.mood] || "";
@@ -216,7 +218,7 @@ function drawHealthRows(rows) {
 }
 
 document.getElementById("healthMoreBtn").addEventListener("click", () => {
-  healthLimit += 60;
+  healthLimit += pageSize();
   const all = ALL.series.filter(x => x.id).slice().reverse();
   drawHealthRows(all);
 });
@@ -226,7 +228,7 @@ document.getElementById("hb").addEventListener("click", (e) => {
   if (t) delRecord(t.dataset.day);
 });
 
-document.getElementById("rangeSel").addEventListener("change", () => { healthLimit = 60; render(); });
+document.getElementById("rangeSel").addEventListener("change", () => { healthLimit = pageSize(); render(); });
 document.getElementById("cDay").addEventListener("change", e => loadDay(e.target.value));
 window.addEventListener("themechange", () => setTimeout(render, 30));
 
