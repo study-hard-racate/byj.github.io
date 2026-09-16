@@ -475,7 +475,7 @@ tbody tr:last-child td { border-bottom: none; }
     border-radius: 18px 18px 0 0;
     max-height: 88vh;
     padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
-    animation: sheet-up .22s ease-out;
+    animation: sheet-up .3s cubic-bezier(.22,1.05,.36,1);
   }
   @keyframes sheet-up {
     from { transform: translateY(90px); opacity: .3; }
@@ -561,4 +561,107 @@ a, button, .chip, .star, .nav-item, .bottom-nav a { -webkit-tap-highlight-color:
 @media (max-width: 640px) {
   .modal-foot { gap: 10px; }
   .modal-foot .btn { flex: 1; justify-content: center; min-height: 44px; }
+}
+
+/* ============ 动效层（M5：进场 / 图表生长 / 导航与顶栏反馈）============
+   全部只用 transform + opacity（走合成器，不触发布局）；
+   并且一律关在 prefers-reduced-motion: no-preference 里，用户关掉动效就彻底安静。 */
+
+/* 用户要求减少动态效果 → 全局静默（含既有动画与过渡） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* 块级进场：一次性错峰淡入（.anim 由 app.js 只挂在"有盒子"的块上）。
+   刻意**没有**常驻的 opacity:0 —— 隐藏只存在于动画自身的 delay 阶段（fill-mode: backwards），
+   动画一定会结束；配合"隐藏中的元素不挂动画"，任何情况下内容都不会卡在透明态。 */
+@media (prefers-reduced-motion: no-preference) {
+  .main .anim {
+    animation: rv-in .46s cubic-bezier(.22,.9,.32,1) backwards;
+    animation-delay: calc(var(--rv, 0) * 40ms);
+  }
+  @keyframes rv-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* 图表"长出来"：面积淡入 / 折线画线 / 圆点弹出 / 柱子长高 / 环形转出 */
+@media (prefers-reduced-motion: no-preference) {
+  .chart .c-area { animation: c-fade .7s ease-out .1s backwards; }
+  .chart .c-line { stroke-dasharray: 1; animation: c-draw .9s cubic-bezier(.33,.9,.3,1) forwards; }
+  .chart .c-dot {
+    transform-box: fill-box; transform-origin: center;
+    animation: c-pop .32s cubic-bezier(.3,1.5,.5,1) backwards;
+    animation-delay: calc(.45s + var(--i, 0) * 10ms);
+  }
+  .chart .c-bar {
+    transform-box: fill-box; transform-origin: bottom;
+    animation: c-grow .5s cubic-bezier(.25,.9,.3,1) backwards;
+    animation-delay: calc(var(--i, 0) * 22ms);
+  }
+  .chart .c-donut {
+    transform-box: fill-box; transform-origin: center;
+    animation: c-donut .62s cubic-bezier(.22,.9,.32,1) backwards;
+  }
+  @keyframes c-fade  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes c-draw  { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  @keyframes c-pop   { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: none; } }
+  @keyframes c-grow  { from { transform: scaleY(0); } to { transform: none; } }
+  @keyframes c-donut { from { opacity: 0; transform: rotate(-14deg) scale(.86); } to { opacity: 1; transform: none; } }
+}
+
+/* 明细 / 记录卡片逐条淡入（移动端才做；表格行只动 opacity，避免 tr 上做 transform 的兼容坑） */
+@media (prefers-reduced-motion: no-preference) and (max-width: 640px) {
+  .txn tbody tr, .htx tbody tr { animation: c-fade .26s ease-out backwards; }
+  .txn tbody tr:nth-child(2), .htx tbody tr:nth-child(2) { animation-delay: 24ms; }
+  .txn tbody tr:nth-child(3), .htx tbody tr:nth-child(3) { animation-delay: 48ms; }
+  .txn tbody tr:nth-child(4), .htx tbody tr:nth-child(4) { animation-delay: 72ms; }
+  .txn tbody tr:nth-child(5), .htx tbody tr:nth-child(5) { animation-delay: 96ms; }
+  .txn tbody tr:nth-child(6), .htx tbody tr:nth-child(6) { animation-delay: 120ms; }
+}
+
+/* 底部导航：选中指示条 + 图标轻抬，让"当前在哪一页"有反馈 */
+@media (prefers-reduced-motion: no-preference) and (max-width: 820px) {
+  .bottom-nav a { position: relative; transition: color .18s; }
+  .bottom-nav a .ico { display: inline-block; transition: transform .24s cubic-bezier(.3,1.4,.5,1); }
+  .bottom-nav a.active .ico { transform: translateY(-2px) scale(1.08); }
+  .bottom-nav a.active::before {
+    content: ""; position: absolute; top: 3px; left: 50%; width: 18px; height: 3px;
+    border-radius: 2px; background: var(--accent); transform: translateX(-50%);
+    animation: nav-pill .34s cubic-bezier(.22,.9,.32,1) backwards;
+  }
+  @keyframes nav-pill {
+    from { opacity: 0; transform: translateX(-50%) scaleX(.15); }
+    to   { opacity: 1; transform: translateX(-50%) scaleX(1); }
+  }
+}
+
+/* 顶栏滚动态：加一层投影，滚动时不再和内容糊在一起（类名由 app.js 的 scroll 监听切换） */
+.mobile-top { transition: box-shadow .2s; }
+.mobile-top.scrolled { box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+:root[data-theme="light"] .mobile-top.scrolled { box-shadow: 0 6px 18px rgba(20,30,60,.1); }
+
+/* 桌面端弹窗的进入动画（手机端保持底部抽屉的 sheet-up） */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  .modal { animation: modal-in .2s cubic-bezier(.22,.9,.32,1) backwards; }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* 页面切换：跨文档 View Transition（新版 Chrome/Safari 生效；不支持的浏览器照常跳转）。
+   顶栏与底部导航命名后保持原位，只让主内容交叉淡入，像原生 App。 */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .mobile-top { view-transition-name: dsh-top; }
+  .bottom-nav { view-transition-name: dsh-nav; }
+  ::view-transition-old(root) { animation-duration: .16s; }
+  ::view-transition-new(root) { animation-duration: .24s; }
+  ::view-transition-group(dsh-top), ::view-transition-group(dsh-nav) { animation-duration: .2s; }
 }

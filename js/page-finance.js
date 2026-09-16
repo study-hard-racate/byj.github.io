@@ -88,7 +88,7 @@ async function render() {
   const hasData = ALL_TXN.length > 0;
   document.getElementById("emptyHint").style.display = hasData ? "none" : "";
   document.getElementById("content").style.display = hasData ? "" : "none";
-  if (!hasData) return;
+  if (!hasData) { staggerScan(); return; }
 
   const filteredExpense = rows.filter(r => r.direction === "expense");
   const filteredIncome = rows.filter(r => r.direction === "income");
@@ -96,14 +96,15 @@ async function render() {
   const sumInc = filteredIncome.reduce((a, b) => a + b.amount, 0);
   const maxRow = filteredExpense.reduce((a, b) => (a && a.amount >= b.amount) ? a : b, null);
 
-  document.getElementById("kExpense").textContent = money0(sumExp);
+  countUp(document.getElementById("kExpense"), sumExp, money0);
   document.getElementById("kExpenseFoot").textContent =
     els.month.value === "all" ? "全部区间" : `${m} · 环比 ${sum.mom === null ? "—" : (sum.mom > 0 ? "↑" : "↓") + Math.abs(sum.mom) + "%"}`;
-  document.getElementById("kIncome").textContent = money0(sumInc);
+  countUp(document.getElementById("kIncome"), sumInc, money0);
   document.getElementById("kIncomeFoot").textContent = `${filteredIncome.length} 笔`;
-  document.getElementById("kCount").textContent = rows.length;
+  countUp(document.getElementById("kCount"), rows.length, n => String(Math.round(n)));
   document.getElementById("kCountFoot").textContent = `支出 ${filteredExpense.length} · 收入 ${filteredIncome.length}`;
-  document.getElementById("kMax").textContent = maxRow ? money0(maxRow.amount) : "—";
+  if (maxRow) countUp(document.getElementById("kMax"), maxRow.amount, money0);
+  else document.getElementById("kMax").textContent = "—";
   document.getElementById("kMaxFoot").textContent = maxRow ? esc(maxRow.counterparty || maxRow.description || "").slice(0, 14) : "";
 
   // 饼图（当前筛选的支出）
@@ -144,6 +145,7 @@ async function render() {
       <div class="banner-body">📥 ${nowMonth} 还没有账单记录，记得导入或记一笔。</div>
       <a class="btn sm primary" href="import.html">去导入</a>
     </div>` : "";
+  staggerScan();
 }
 
 /* ---------- 明细分批渲染 + 加载更多 ---------- */
@@ -359,5 +361,6 @@ window.addEventListener("themechange", () => setTimeout(render, 30));
     await render();
   } catch (e) {
     console.error(e);
+    staggerScan();
   }
 })();

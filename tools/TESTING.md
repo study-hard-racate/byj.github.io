@@ -60,4 +60,4 @@ node tools/unit-test-db.js       # 数据层 16 项
 1. `git fetch && git status` 确认已同步。
 2. 推送后等 1~2 分钟 Pages 自动部署。
 3. 线上对比（字节级，注意 PowerShell 文本对比会被编码骗）：`git cat-file blob HEAD:<f>` 落盘 vs `Invoke-WebRequest -OutFile`，`Get-FileHash` 比对。
-4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v11）。
+4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v12）。

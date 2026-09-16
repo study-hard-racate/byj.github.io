@@ -44,7 +44,7 @@ npx serve .
 - CI：推送到 `main` 后 GitHub Actions 自动跑同一套回归（见 `.github/workflows/ci.yml`）
 - 浏览器端到端与线上验证清单：见 [`tools/TESTING.md`](tools/TESTING.md)
 - 移动端回归审计：跑 `tools/mobile-audit.js`（0 溢出 / 触控≥40px / iOS 输入不缩放 / 导航字号）
-- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v11），否则用户会被旧缓存困住
+- 发布新版本记得递增 [`sw.js`](sw.js) 顶部 `CACHE` 版本号（当前 v12），否则用户会被旧缓存困住
 
 ## 部署到 GitHub Pages
 

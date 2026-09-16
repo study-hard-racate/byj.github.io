@@ -29,6 +29,7 @@ async function render() {
   if (!hasFinance && !hasHealth) {
     document.getElementById("emptyAll").style.display = "";
     document.getElementById("content").style.display = "none";
+    staggerScan();
     return;
   }
   document.getElementById("emptyAll").style.display = "none";
@@ -55,16 +56,16 @@ async function render() {
     ? Math.floor((new Date() - yStart) / 86400000) + 1
     : (yEnd - yStart) / 86400000;
 
-  document.getElementById("yExpense").textContent = money0(expense);
+  countUp(document.getElementById("yExpense"), expense, money0);
   document.getElementById("yExpenseFoot").textContent = `${expenseCnt} 笔支出`;
-  document.getElementById("yIncome").textContent = money0(income);
+  countUp(document.getElementById("yIncome"), income, money0);
   document.getElementById("yIncomeFoot").textContent = isCurYear ? "今年进行中" : "全年";
   const yb = document.getElementById("yBalance");
-  yb.textContent = money0(income - expense);
+  countUp(yb, income - expense, money0);
   yb.style.color = income - expense >= 0 ? "var(--green)" : "var(--red)";
   document.getElementById("yBalanceFoot").textContent =
     income > 0 ? `储蓄率 ${Math.max(0, (income - expense) / income * 100).toFixed(0)}%` : "暂无收入记录";
-  document.getElementById("yAvg").textContent = money0(expense / Math.max(daysPassed, 1));
+  countUp(document.getElementById("yAvg"), expense / Math.max(daysPassed, 1), money0);
   document.getElementById("yAvgFoot").textContent = `按 ${daysPassed.toFixed(0)} 天计算`;
 
   // 环形图
@@ -149,6 +150,7 @@ async function render() {
   if (bestM) extra.push(`🗓️ 打卡最勤的是 <b style="color:var(--text)">${bestM[0] + 1} 月</b>（${bestM[1]} 天）`);
   extra.push(`😊 平均心情 <b style="color:var(--text)">${st.avg_mood}</b> / 5`);
   document.getElementById("healthExtra").innerHTML = extra.join("　·　");
+  staggerScan();
 }
 
 async function longestStreak(records) {

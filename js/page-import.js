@@ -149,4 +149,5 @@ async function reclassify() {
   } catch (e) {
     console.error(e);
   }
+  staggerScan();
 })();

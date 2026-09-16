@@ -172,6 +172,7 @@ async function render() {
 
   // 记录列表（事件委托）。h-* 类用于 ≤640px 卡片布局 —— 分批渲染 + 加载更多
   drawHealthRows(S.filter(x => x.id).slice().reverse());
+  staggerScan();
 }
 
 /* ---------- 记录列表分批渲染 + 加载更多 ---------- */

@@ -270,4 +270,5 @@ async function reseedDemo() {
   } catch (e) {
     console.error(e);
   }
+  staggerScan();
 })();

@@ -108,3 +108,87 @@ function todayStr() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 function monthLabel(m) { return m ? m.slice(0, 4) + " 年 " + Number(m.slice(5)) + " 月" : ""; }
+
+/* =========================================================
+   动效层（app.js —— 移动端"活"起来的那部分）
+   两条铁律：
+   1) 尊重 prefers-reduced-motion —— 用户关掉动态效果时，一切静默且内容照常可见；
+   2) 只动 transform / opacity，走合成器，绝不触发布局（长列表滚动不掉帧）。
+   ========================================================= */
+const MQ_REDUCE = (typeof window.matchMedia === "function")
+  ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+function motionOK() { return !(MQ_REDUCE && MQ_REDUCE.matches); }
+
+/* ---------- 数字滚动（金额统计用；从上次显示的值滚到新值） ---------- */
+function countUp(el, to, fmt, ms) {
+  if (!el) return;
+  const target = Number(to);
+  if (!isFinite(target)) return;
+  const start = isFinite(el._cv) ? el._cv : 0;
+  if (!motionOK() || start === target) {
+    if (el._cuRaf) { cancelAnimationFrame(el._cuRaf); el._cuRaf = null; }
+    el._cv = target;
+    el.textContent = fmt(target);
+    return;
+  }
+  if (el._cuRaf) cancelAnimationFrame(el._cuRaf);
+  const dur = ms || 480, t0 = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3); // easeOutCubic
+  const tick = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const v = start + (target - start) * ease(p);
+    el._cv = p === 1 ? target : v;
+    el.textContent = fmt(el._cv);
+    el._cuRaf = p < 1 ? requestAnimationFrame(tick) : null;
+  };
+  el._cuRaf = requestAnimationFrame(tick);
+}
+
+/* ---------- 进场 / 滚动显现 ---------- */
+/**
+ * 给"当前真正渲染出来"的块（页头、卡片、统计卡、横幅）排错峰序号并挂 .anim，
+ * 由 CSS 做一次性进场动画。
+ *
+ * 两个刻意的设计取舍：
+ * 1) 不做"滚动到才显现"。那种做法要常驻 opacity:0 再等 IntersectionObserver 来揭，
+ *    观察器一旦没按预期触发，用户看到的就是"内容不见了"——看板不能有这种失败模式。
+ * 2) 只给**有盒子的**元素挂动画。display:none 的空态卡片如果也挂上
+ *    fill-mode:backwards 的动画，动画永远不会开始，就会一直停在 from 那一帧（opacity:0）；
+ *    等用户清空数据、空态终于显示出来时，看到的是一张透明卡片。
+ *    所以隐藏中的元素一律不挂：最坏情况只是"没动画"，内容永远看得见。
+ */
+function staggerScan(scope) {
+  if (!motionOK()) return 0;
+  const root = scope || document;
+  const all = [...root.querySelectorAll(".main .page-head, .main .card, .main .stat, .main .banner")];
+  const outer = all.filter(el => !all.some(o => o !== el && el.contains(o)));
+  let n = 0;
+  for (const el of outer) {
+    if (el.dataset.rv) continue;
+    if (!el.getClientRects().length) continue; // 隐藏中（display:none 的空态、未展开的面板）→ 不挂动画
+    el.dataset.rv = "1";
+    el.style.setProperty("--rv", String(Math.min(n, 7)));
+    el.classList.add("anim");
+    // 兜底：浏览器在后台标签页会冻结动画时钟（document.timeline 不走），
+    // 那样 fill-mode:backwards 会一直停在 opacity:0。定时器在后台仍会执行，
+    // 到点直接摘掉 .anim，无论动画有没有跑完，内容都保证可见。
+    setTimeout(() => { el.classList.remove("anim"); el.style.removeProperty("--rv"); }, 1000);
+    n++;
+  }
+  return n;
+}
+
+/* ---------- 顶栏滚动投影（滚动时才浮起来） ---------- */
+(function stickyTopShadow() {
+  const bar = document.getElementById("mobileTop");
+  if (!bar) return;
+  let ticking = false;
+  const update = () => { ticking = false; bar.classList.toggle("scrolled", window.scrollY > 4); };
+  window.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }, { passive: true });
+  update();
+})();
+

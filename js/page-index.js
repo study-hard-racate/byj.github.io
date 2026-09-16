@@ -115,21 +115,21 @@ async function render() {
   const hasHealth = health.records > 0;
   document.getElementById("emptyAll").style.display = (hasFinance || hasHealth) ? "none" : "";
   document.getElementById("mainContent").style.display = (hasFinance || hasHealth) ? "" : "none";
-  if (!hasFinance && !hasHealth) return;
+  if (!hasFinance && !hasHealth) { staggerScan(); return; }
 
-  // 统计卡
-  document.getElementById("sExpense").textContent = money0(sum.expense);
+  // 统计卡（金额滚上去，不只是"啪"一下出现）
+  countUp(document.getElementById("sExpense"), sum.expense, money0);
   document.getElementById("sExpenseFoot").innerHTML = sum.mom === null
     ? `共 ${sum.expense_count} 笔`
     : `环比 <span class="${sum.mom > 0 ? 'up' : 'down'}">${sum.mom > 0 ? '↑' : '↓'} ${Math.abs(sum.mom)}%</span> · ${sum.expense_count} 笔`;
-  document.getElementById("sIncome").textContent = money0(sum.income);
+  countUp(document.getElementById("sIncome"), sum.income, money0);
   document.getElementById("sIncomeFoot").textContent = `已过 ${sum.passed_days} / ${sum.days_in_month} 天`;
   const bal = document.getElementById("sBalance");
-  bal.textContent = money0(sum.balance);
+  countUp(bal, sum.balance, money0);
   bal.style.color = sum.balance >= 0 ? "var(--green)" : "var(--red)";
   document.getElementById("sBalanceFoot").textContent =
     sum.income > 0 ? `支出占收入 ${(sum.expense / sum.income * 100).toFixed(0)}%` : "暂无收入记录";
-  document.getElementById("sAvg").textContent = money0(sum.avg_daily);
+  countUp(document.getElementById("sAvg"), sum.avg_daily, money0);
   document.getElementById("sAvgFoot").textContent =
     sum.avg_daily > 0 ? `按此速度本月约 ${money0(sum.avg_daily * sum.days_in_month)}` : "—";
 
@@ -232,6 +232,7 @@ async function render() {
       `<a class="btn primary" href="health.html">去打卡</a>`);
 
   await refreshBanners();
+  staggerScan();
 }
 
 monthSel.addEventListener("change", render);
@@ -247,5 +248,6 @@ window.addEventListener("themechange", () => setTimeout(render, 30));
     document.getElementById("emptyAll").style.display = "none";
     document.getElementById("mainContent").innerHTML =
       `<div class="card"><div class="empty"><div class="big">😵</div><p>初始化出错：${esc(e.message)}</p></div></div>`;
+    staggerScan();
   }
 })();

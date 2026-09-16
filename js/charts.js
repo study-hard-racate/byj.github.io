@@ -19,7 +19,8 @@
   function redrawAll() {
     for (const [c, draw] of [...registry]) {
       if (!c.isConnected) { registry.delete(c); continue; }
-      try { draw(); } catch (e) { /* 单个图失败不影响其它 */ }
+      // 尺寸变化导致的重绘不重播动画，否则拖动窗口/转屏时图表一直在"重新长出来"
+      try { draw(true); } catch (e) { /* 单个图失败不影响其它 */ }
     }
   }
   function scheduleRedraw(delay) {
@@ -28,6 +29,12 @@
   }
   window.addEventListener("resize", () => scheduleRedraw(180));
   window.addEventListener("orientationchange", () => scheduleRedraw(260));
+
+  /* ---------- 生长动画开关 ----------
+     尊重 prefers-reduced-motion；图表重绘（筛选/换月/切主题）时重播，尺寸变化时不重播。 */
+  const MQ_REDUCE = (typeof window.matchMedia === "function")
+    ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  function animOK(noAnim) { return !noAnim && !(MQ_REDUCE && MQ_REDUCE.matches); }
 
   function fitWidth(container, fallback) {
     const w = Math.round((container && container.clientWidth) || 0);
@@ -127,8 +134,9 @@
   }
 
   /* ================= 折线图 ================= */
-  function LineChart(container, opt) {
+  function LineChart(container, opt, noAnim) {
     container.innerHTML = "";
+    const animate = animOK(noAnim);
     const labels = opt.labels || [];
     const series = (opt.series || []).filter(s => s && !s.hidden);
     const W = opt.width || fitWidth(container, 720), H = opt.height || 260;
@@ -223,12 +231,16 @@
             ` L${X(pts[pts.length - 1]).toFixed(1)} ${base} Z `;
         }
         el("path", {
+          class: animate ? "c-area" : null,
           d: areaD,
           fill: s.color, opacity: s.fillOpacity || 0.13, stroke: "none"
         }, svg);
       }
       if (d) {
         el("path", {
+          // 实线才做"画线"动画：虚线序列的 stroke-dasharray 会被这条 CSS 覆盖掉
+          class: (animate && !s.dashed) ? "c-line" : null,
+          pathLength: (animate && !s.dashed) ? 1 : null,
           d: d, fill: "none", stroke: s.color,
           "stroke-width": s.width || 2.2,
           "stroke-linejoin": "round", "stroke-linecap": "round",
@@ -239,8 +251,9 @@
         data.forEach((v, i) => {
           const isGap = v === null || v === undefined || (opt.treatZeroAsGap && Number(v) === 0);
           if (isGap) return;
-          el("circle", { class: "dot", cx: X(i), cy: Y(Number(v)), r: 3,
-                         fill: themeVar("--card", "#191d28"), stroke: s.color, "stroke-width": 2 }, svg);
+          const dot = el("circle", { class: animate ? "dot c-dot" : "dot", cx: X(i), cy: Y(Number(v)), r: 3,
+                                     fill: themeVar("--card", "#191d28"), stroke: s.color, "stroke-width": 2 }, svg);
+          if (animate) dot.style.setProperty("--i", String(Math.min(i, 30)));
         });
       }
     });
@@ -268,13 +281,14 @@
       tip.show(X(i), Y(first ? first.v : (vmin + vmax) / 2), `${label}  ${body}`, W, H);
     });
     overlay.addEventListener("mouseleave", () => tip.hide());
-    registerChart(container, () => LineChart(container, opt));
+    registerChart(container, noAnim2 => LineChart(container, opt, noAnim2));
     return svg;
   }
 
   /* ================= 分组柱状图 ================= */
-  function BarChart(container, opt) {
+  function BarChart(container, opt, noAnim) {
     container.innerHTML = "";
+    const animate = animOK(noAnim);
     const labels = opt.labels || [];
     const series = (opt.series || []).filter(s => s && !s.hidden);
     const W = opt.width || fitWidth(container, 720), H = opt.height || 260;
@@ -336,10 +350,12 @@
         const h = Math.max(0, pad.t + ih - y);
         const r = Math.min(4, bw / 2.5);
         const rect = el("path", {
-          class: "bar", fill: s.color,
+          class: animate ? "bar c-bar" : "bar", fill: s.color,
           d: roundRectPath(x + 0.8, y, Math.max(bw - 1.6, 1), h, r),
           opacity: 0.92
         }, svg);
+        // 同一组柱子一起长（--i 用标签序号），形成从左到右的波浪
+        if (animate) rect.style.setProperty("--i", String(Math.min(i, 14)));
         rect.addEventListener("mousemove", () => {
           tip.setLineColor(s.color);
           tip.show(x + bw / 2, Math.max(y, 12),
@@ -379,7 +395,7 @@
         });
       }
     });
-    registerChart(container, () => BarChart(container, opt));
+    registerChart(container, noAnim2 => BarChart(container, opt, noAnim2));
     return svg;
   }
 
@@ -394,6 +410,7 @@
   /* ================= 环形图 ================= */
   function DonutChart(container, opt) {
     container.innerHTML = "";
+    const animate = animOK(false);
     const data = (opt.data || []).filter(d => d.value > 0);
     const size = opt.size || 220, thickness = opt.thickness || 30;
     const cx = size / 2, cy = size / 2, R = size / 2 - 6, r = R - thickness;
@@ -411,6 +428,8 @@
     const total = data.reduce((a, b) => a + b.value, 0);
     let angle = -Math.PI / 2;
     const tip = Tip(svg);
+    // 扇区与中心文字放进同一个 <g>，整块一起转出来（tooltip 留在 svg 上，不跟着动）
+    const ring = animate ? el("g", { class: "c-donut" }, svg) : svg;
 
     data.forEach(d => {
       const frac = d.value / total;
@@ -420,7 +439,7 @@
       const p = el("path", {
         d: arcPath(cx, cy, R, r, a0 + gap, Math.max(a1 - gap, a0 + 0.004)),
         fill: d.color || "#888", opacity: 0.92, class: "bar"
-      }, svg);
+      }, ring);
       p.addEventListener("mousemove", () => {
         tip.setLineColor(d.color || "#888");
         tip.show(cx, cy - R * 0.55,
@@ -431,10 +450,10 @@
 
     if (opt.centerText !== false) {
       el("text", { x: cx, y: cy - 6, "text-anchor": "middle",
-                   style: `font-size:20px;font-weight:700;fill:${themeVar("--text", "#fff")}` }, svg)
+                   style: `font-size:20px;font-weight:700;fill:${themeVar("--text", "#fff")}` }, ring)
         .textContent = opt.centerValue !== undefined ? opt.centerValue : fmtNum(total, 0);
       el("text", { x: cx, y: cy + 13, "text-anchor": "middle",
-                   style: "font-size:11px" }, svg)
+                   style: "font-size:11px" }, ring)
         .textContent = opt.centerLabel || "合计";
     }
     return svg;
