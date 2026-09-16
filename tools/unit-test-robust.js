@@ -1,7 +1,7 @@
 // 单测：纯 JS inflate / 多 sheet xlsx / .xls 识别 / 日期归一化（备份恢复修复）
 const fs = require("fs");
 const path = require("path");
-const BASE = "D:/DeepSeek/deepseek harnes/byj.github.io";
+const BASE = path.join(__dirname, "..");
 const TD = path.join(BASE, "tools/testdata");
 
 function load(rel, exports) {

@@ -111,10 +111,9 @@ async function render() {
   // 表格（事件委托，不用内联 onclick，杜绝注入）—— 分批渲染 + 加载更多
   drawTable(rows);
 
-  // 月度导入提醒
+  // 月度导入提醒（本月无记录、但库里有历史数据时才提示）
   const b = document.getElementById("banners");
-  const hasThisMonth = await DB.getSetting("monthSeen:" + nowMonth, false)
-    || sum.expense_count > 0 || sum.income > 0;
+  const hasThisMonth = sum.expense_count > 0 || sum.income > 0;
   b.innerHTML = (!hasThisMonth && (await DB.getAll("transactions")).length > 0) ? `
     <div class="banner">
       <div class="banner-body">📥 ${nowMonth} 还没有账单记录，记得导入或记一笔。</div>
@@ -229,7 +228,8 @@ async function reclassify() {
 
 /* ---------- 导出 CSV（当前筛选结果，带 BOM） ---------- */
 function exportCsv() {
-  const esc = s => {
+  // 局部转义（不要叫 esc，避免遮蔽 app.js 的全局 HTML 转义函数）
+  const csvCell = s => {
     s = String(s === null || s === undefined ? "" : s);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
@@ -239,7 +239,7 @@ function exportCsv() {
     lines.push([
       fmtDateTime(t.occurred_at), t.category, dirName[t.direction] || t.direction,
       t.amount, t.source, t.counterparty, t.description, t.method,
-    ].map(esc).join(","));
+    ].map(csvCell).join(","));
   });
   download(`bills_export_${nowMonthStr()}.csv`, lines.join("\n"), "text/csv;charset=utf-8");
   toast(`已导出 ${CURRENT_ROWS.length} 条`, "ok");

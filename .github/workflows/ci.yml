@@ -1,0 +1,21 @@
+name: unit tests
+
+# 这个仓库是纯前端静态站（GitHub Pages 直接从分支根目录发布），
+# 所以 CI 只做一件事：跑 tools/run-tests.js 全量单元测试，防止解析器 /
+# 数据层改坏了却没人发现。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 跑全量单元测试
+        run: node tools/run-tests.js

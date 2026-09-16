@@ -10,6 +10,7 @@ const tests = [
   ["unit-test-parsers.js", "解析器（CSV/时间/方向/分类/GBK）"],
   ["unit-test-xlsx.js", "Excel（共享串/日期序列/内联串/回归）"],
   ["unit-test-robust.js", "健壮性（inflate/多sheet/.xls/备份日期）"],
+  ["unit-test-db.js", "数据层（导入去重计数/分类锁定/统计/备份往返）"],
 ];
 
 let failed = 0;

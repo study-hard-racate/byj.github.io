@@ -1,0 +1,9 @@
+{
+  "name": "byj-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BYJ 的个人看板 —— 纯前端财务账单 + 习惯健康 PWA（数据只存浏览器本地）",
+  "scripts": {
+    "test": "node tools/run-tests.js"
+  }
+}

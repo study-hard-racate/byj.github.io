@@ -3,15 +3,18 @@
 ## 单元测试（Node，无需浏览器）
 
 ```bash
-node tools/run-tests.js          # 一键跑全部（44 项）
+node tools/run-tests.js          # 一键跑全部（63 项），等价于 npm test
 # 或单个：
-node tools/unit-test-parsers.js  # 解析器 13 项
+node tools/unit-test-parsers.js  # 解析器 16 项
 node tools/unit-test-xlsx.js     # Excel 15 项
 node tools/unit-test-robust.js   # 健壮性 16 项
+node tools/unit-test-db.js       # 数据层 16 项
 ```
 
-- 改解析器/xlsx/备份逻辑后必须跑全量；测试数据由 `tools/gen_test_xlsx.py`、`tools/gen_extra_tests.py` 生成。
+- 改解析器 / xlsx / 数据层 / 备份逻辑后必须跑全量；测试数据由 `tools/gen_test_xlsx.py`、`tools/gen_extra_tests.py` 生成。
 - 提示：Node 里加载页面 JS 用 `new Function(src + "; return {...}")`；`parsers.js` 依赖 `xlsx.js` 全局，需合并同作用域加载。
+- 路径约定：测试脚本一律用 `path.join(__dirname, "..")` 定位项目根，**不要写绝对路径**，否则换机器/换目录就全线报错。
+- `unit-test-db.js` 覆盖 IndexedDB 数据层（导入去重与「新增条数」、分类锁定、月度统计、备份往返）。Node 没有 IndexedDB，脚本里注入了一个最小内存实现，只实现了 `db.js` 真正用到的那部分 API；给 `db.js` 增加新的 IDB 调用时要同步补这个假实现。
 
 ## 浏览器端到端（tabbit 托管浏览器）
 
@@ -55,4 +58,4 @@ node tools/unit-test-robust.js   # 健壮性 16 项
 1. `git fetch && git status` 确认已同步。
 2. 推送后等 1~2 分钟 Pages 自动部署。
 3. 线上对比（字节级，注意 PowerShell 文本对比会被编码骗）：`git cat-file blob HEAD:<f>` 落盘 vs `Invoke-WebRequest -OutFile`，`Get-FileHash` 比对。
-4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v5）。
+4. tabbit 打开线上 URL 跑一遍 e2e；若用户报"没变化"，多半是 SW 旧缓存 —— 记得发布时 bump `sw.js` 的 `CACHE` 版本（当前 v9）。

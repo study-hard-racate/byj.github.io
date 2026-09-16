@@ -1,7 +1,7 @@
 // Node 单测：xlsx 解析 + parseBillFile（含日期序列、共享/内联字符串）
 const fs = require("fs");
 const path = require("path");
-const BASE = "D:/DeepSeek/deepseek harnes/byj.github.io";
+const BASE = path.join(__dirname, "..");
 
 function load(rel, exports) {
   const src = fs.readFileSync(path.join(BASE, rel), "utf8");

@@ -81,10 +81,11 @@ const DB = (() => {
     add(store, obj) {
       return run(store, "readwrite", s => req(s.add(obj)));
     },
+    /** 批量写入：返回「本次提交的条数」，不是 store 总条数（否则导入页会把历史记录算进"新增"） */
     bulkAdd(store, arr) {
       return run(store, "readwrite", s => {
         arr.forEach(o => s.add(o));
-        return req(s.count());
+        return arr.length;
       });
     },
     put(store, obj) {
@@ -153,8 +154,7 @@ const DB = (() => {
         });
         exist.add(fp);
       }
-      let added = 0;
-      if (toAdd.length) added = await this.bulkAdd("transactions", toAdd);
+      const added = toAdd.length ? await this.bulkAdd("transactions", toAdd) : 0;
       return { added, dup };
     },
 

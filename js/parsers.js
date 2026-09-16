@@ -29,8 +29,10 @@ const ALIPAY_CATEGORY_MAP = {
   "信用借还": "金融·还款", "保险": "金融·保险", "其他": "未分类",
 };
 
-// 视为「不计收支」的关键词（内部转账、提现、充值等）
-const NON_SPEND_KEYWORDS = ["不计收支", "零钱提现", "提现", "零钱充值", "充值", "信用卡还款", "转账到银行卡"];
+// 视为「不计收支」的关键词（内部转账、提现等）
+// 注意：不要收录裸「充值」——「话费充值 / 电费充值 / 游戏充值」是真实支出，
+// 命中后会变成 transfer 而不计入月度统计。只收录「零钱充值」这类平台内部资金搬运。
+const NON_SPEND_KEYWORDS = ["不计收支", "零钱提现", "提现", "零钱充值", "信用卡还款", "转账到银行卡"];
 // 视为「无效交易」直接跳过的状态
 const INVALID_STATUS = ["交易关闭", "已关闭", "失败", "已全额退款", "已退款", "退款成功", "已撤销", "解冻成功", "冻结成功"];
 
@@ -204,7 +206,9 @@ function parseGrid(grid, manualSource = "") {
   if (!header) {
     return { records: [], meta: { source, total_rows: 0, skipped: 0, warnings: ["没找到表头行，请确认这是支付宝/微信导出的原始账单（微信「用于个人对账」导出的 Excel 可直接上传）"] } };
   }
-  const mapping = mapColumns(splitCsvLine(header.line));
+  // 直接用原始行单元格做列映射：不要再 join(",") 后 splitCsvLine 拆回来，
+  // 否则表头里含逗号/引号的单元格（如 "备注,说明"）会被拆成两列导致整表错位。
+  const mapping = mapColumns(rows[header.idx]);
   const missing = ["time", "amount"].filter(f => !(f in mapping));
   if (missing.length) {
     warnings.push(`表头缺少关键列：${missing.join("/")}，已尝试按通用格式解析`);

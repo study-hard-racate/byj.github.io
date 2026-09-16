@@ -1,10 +1,13 @@
 # 统一行尾为 LF，杜绝跨设备/跨会话的 CRLF 噪音与“假差异”
 * text=auto
+.gitattributes text eol=lf
 
 *.html text eol=lf
 *.css  text eol=lf
 *.js   text eol=lf
 *.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
 *.md   text eol=lf
 *.py   text eol=lf
 *.svg  text eol=lf

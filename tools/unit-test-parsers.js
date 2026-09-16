@@ -1,7 +1,7 @@
 // Node 单测：解析器（GBK 解码 / 时间 T 格式 / 方向判定 / 指纹去重）
 const fs = require("fs");
 const path = require("path");
-const BASE = "D:/DeepSeek/deepseek harnes/byj.github.io";
+const BASE = path.join(__dirname, "..");
 
 function load(rel, exports) {
   const src = fs.readFileSync(path.join(BASE, rel), "utf8");
@@ -46,6 +46,19 @@ function load(rel, exports) {
   const gen2 = parsers.parseBillText("时间,商户,金额,备注\n2026-08-01 10:00,零钱,35.00,零钱提现", "generic");
   ok("命中不计收支关键词→transfer", gen2.records.length === 1 && gen2.records[0].direction === "transfer",
     "dir=" + (gen2.records[0] && gen2.records[0].direction));
+
+  // 回归：裸「充值」不再算不计收支 —— 话费/电费/游戏充值都是真支出，必须进统计
+  const gen3 = parsers.parseBillText("时间,商户,金额,备注\n2026-08-02 09:00,中国移动,99.00,话费充值", "generic");
+  ok("话费充值→支出（不再误判 transfer）", gen3.records.length === 1 && gen3.records[0].direction === "expense",
+    "dir=" + (gen3.records[0] && gen3.records[0].direction));
+  const gen4 = parsers.parseBillText("时间,商户,金额,备注\n2026-08-02 09:10,零钱,200.00,零钱充值", "generic");
+  ok("零钱充值→transfer（仍属内部搬运）", gen4.records.length === 1 && gen4.records[0].direction === "transfer",
+    "dir=" + (gen4.records[0] && gen4.records[0].direction));
+
+  // 回归：表头里含逗号的单元格（CSV 引号包裹）不能把整表列位挤错
+  const hdr = parsers.parseBillText('时间,"备注,说明",金额\n2026-08-03 12:00,"午餐,加班",25.50', "generic");
+  ok("表头含逗号不破坏列映射", hdr.records.length === 1 && hdr.records[0].amount === 25.5,
+    "records=" + hdr.records.length + " amount=" + (hdr.records[0] && hdr.records[0].amount));
 
   // 5. 指纹去重稳定性
   const fp1 = parsers.fingerprint(t1, 20, "测试", "描述");
