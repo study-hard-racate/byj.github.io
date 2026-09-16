@@ -275,6 +275,14 @@ tbody tr:last-child td { border-bottom: none; }
 .modal h3 { font-size: 16px; margin-bottom: 16px; }
 .modal-foot { display: flex; gap: 9px; justify-content: flex-end; margin-top: 20px; }
 
+/* 弹窗表单（记一笔）：固定两列网格。
+   原来复用 .checkin-grid（repeat(auto-fit, minmax(150px,1fr))），而栅格子项默认
+   min-width:auto —— datetime-local 的固有宽度约 200px 会把所在列撑爆，直接压到右边
+   「来源」那一栏上。这里用 minmax(0,1fr) 让列宽说了算，宽控件单独整行铺满。 */
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form-grid > .field { min-width: 0; }
+.form-grid > .col-span { grid-column: 1 / -1; }
+
 /* 滚动条 */
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -500,6 +508,10 @@ a, button, .chip, .star, .nav-item, .bottom-nav a { -webkit-tap-highlight-color:
   .checkin-grid > .field.span-full { grid-column: 1 / -1; }
 }
 
+/* 栅格子项默认 min-width:auto，会被宽控件（date / datetime-local）顶爆列宽压到隔壁列上。
+   任何宽度下都先兜住这一层。 */
+.checkin-grid > .field { min-width: 0; }
+
 /* 财务页筛选栏：窄屏折叠成一行（原生 details），展开后两列铺满。
    原来五个控件乱换行、下拉框只有 89px 宽，连「餐饮·咖啡」都显示不全 */
 .filters .filter-summary { display: none; }
@@ -543,4 +555,10 @@ a, button, .chip, .star, .nav-item, .bottom-nav a { -webkit-tap-highlight-color:
 /* 手机上已有右下角「记一笔」悬浮按钮，页头里重复的那个收起来，少占一行 */
 @media (max-width: 640px) {
   .page-head .btn-add-inline { display: none; }
+}
+
+/* 底部抽屉里的弹窗按钮：等宽铺满，单手更好点 */
+@media (max-width: 640px) {
+  .modal-foot { gap: 10px; }
+  .modal-foot .btn { flex: 1; justify-content: center; min-height: 44px; }
 }

@@ -278,7 +278,7 @@ function openAdd() {
   const nowStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}T${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
   openModal(`
     <h3>记一笔</h3>
-    <div class="checkin-grid">
+    <div class="form-grid">
       <label class="field">金额
         <input type="number" id="aAmount" step="0.01" inputmode="decimal" placeholder="0.00" autofocus>
       </label>
@@ -288,7 +288,7 @@ function openAdd() {
           <option value="income">收入</option>
         </select>
       </label>
-      <label class="field">时间
+      <label class="field col-span">时间
         <input type="datetime-local" id="aTime" value="${nowStr}">
       </label>
       <label class="field">来源
@@ -301,13 +301,13 @@ function openAdd() {
       <label class="field">交易对方
         <input type="text" id="aParty" placeholder="如：楼下面馆">
       </label>
-      <label class="field">分类（留空自动判断）
+      <label class="field col-span">分类（留空自动判断）
         <input type="text" id="aCat" placeholder="自动">
       </label>
+      <label class="field col-span">备注
+        <input type="text" id="aDesc" placeholder="选填">
+      </label>
     </div>
-    <label class="field" style="margin-top:12px">备注
-      <input type="text" id="aDesc" placeholder="选填">
-    </label>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal()">取消</button>
       <button class="btn primary" id="saveAddBtn">保存</button>
